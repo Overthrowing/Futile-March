@@ -312,11 +312,31 @@ if(dist <= MIN_DIST) {
     }
     else if(boulder(p) < 0.01) {
         vec3 q = boulderRotMat * (p - boulderPos);
-        vec3 stoneCol = mix(vec3(0.55, 0.5, 0.45), vec3(0.68, 0.62, 0.56), fbm(q * 0.5));
+        
+        // Gray stone base colors
+        vec3 grayBase = vec3(0.45, 0.45, 0.47);
+        vec3 grayLight = vec3(0.58, 0.58, 0.6);
+        vec3 grayDark = vec3(0.32, 0.32, 0.34);
+        
+        // Bumpy surface texture using layered noise
+        float bumpNoise = fbm(q * 2.0) * 0.6 + noise(q * 5.0) * 0.25 + noise(q * 12.0) * 0.15;
+        vec3 stoneCol = mix(grayDark, grayLight, bumpNoise);
+        
+        // Add some subtle color variation (slight blue/brown tints)
+        float colorVar = noise(q * 1.5);
+        stoneCol = mix(stoneCol, stoneCol * vec3(0.95, 0.95, 1.02), colorVar * 0.3);
+        stoneCol = mix(stoneCol, stoneCol * vec3(1.02, 0.98, 0.95), (1.0 - colorVar) * 0.2);
+        
+        // Cracks and crevices
+        float cracks = smoothstep(0.48, 0.52, noise(q * 8.0));
+        stoneCol = mix(stoneCol, grayDark * 0.7, cracks * 0.3);
+        
         col = stoneCol * (amb + diff * 0.6 + fill * 0.4) * occ;
+        
+        // Golden ring grooves (slightly dimmer to match gray)
         float ringDist = boulderRings(q);
-        if(ringDist < 0.5) col += vec3(1.0, 0.8, 0.4) * (0.5 - ringDist) * (0.5 + 0.5 * sin(t * 2.0));
-        col += vec3(0.9, 0.7, 0.3) * isPushing * 0.2;
+        if(ringDist < 0.5) col += vec3(0.9, 0.75, 0.35) * (0.5 - ringDist) * (0.5 + 0.5 * sin(t * 2.0));
+        col += vec3(0.85, 0.7, 0.3) * isPushing * 0.18;
     }
     else if(player(p) < 0.01) {
         vec3 q = rotY(p - playerPos, -playerAngle.x);
