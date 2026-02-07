@@ -4,7 +4,7 @@ export function enableWifi() {
   const titleScreen = document.getElementById('title-screen');
 
   // Using jsDelivr to serve the GitHub content with correct CORS headers for browser playback
-  const AUDIO_SOURCE = "https://cdn.jsdelivr.net/gh/Overthrowing/Futile-March@main/vivaldi.mp3";
+  const AUDIO_SOURCE = "https://cdn.jsdelivr.net/gh/overthrowing/Futile-March/vivaldi.mp3";
 
   if (!wifiBtn || !bgMusic) {
     console.error("Wifi elements not found.");

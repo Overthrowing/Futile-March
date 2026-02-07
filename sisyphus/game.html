@@ -107,7 +107,7 @@
         }
         #wifi-btn {
             position: absolute;
-            top: 60px;
+            top: 80px;
             right: 20px;
             padding: 10px 20px;
             background: rgba(212, 175, 55, 0.2);
@@ -277,7 +277,7 @@
                 font-size: 11px;
             }
             #wifi-btn {
-                top: 50px;
+                top: 60px;
                 right: 15px;
                 padding: 6px 12px;
                 font-size: 11px;
@@ -309,11 +309,14 @@
     <div id="progress" class="hidden">Height: 0m</div>
     <div id="message"></div>
     <button id="reset-btn" class="hidden">RESET (R)</button>
-    <button id="wifi-btn" class="hidden">
+    <button id="wifi-btn">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/>
+        </svg>
         WIFI
     </button>
-    <audio id="bg-music" loop preload="none">
-        <source src="https://github.com/Overthrowing/Futile-March/raw/refs/heads/main/vivaldi.mp3">
+    <audio id="bg-music" loop preload="auto" crossorigin="anonymous">
+        <source src="https://cdn.jsdelivr.net/gh/overthrowing/Futile-March/vivaldi.mp3" type="audio/mpeg">
     </audio>
     <div id="instructions" class="hidden">
         WASD - Move | SPACE - Jump | Hold near boulder to push | R - Reset
@@ -339,26 +342,17 @@
 <script src="boulder.js"></script>
 <script src="game.js"></script>
 <script>
-    if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}
+    if('serviceWorker' in navigator && window.location.protocol.startsWith('http')){navigator.serviceWorker.register('sw.js');}
 
-    const wifiBtn = document.getElementById('wifi-btn');
-    const bgMusic = document.getElementById('bg-music');
+    const wifi = document.getElementById('wifi-btn');
     const ts = document.getElementById('title-screen');
-    const oldStart = ts.onclick;
 
-    ts.onclick = (e) => {
-        if (oldStart) oldStart(e);
-        wifiBtn.classList.remove('hidden');
-    };
+    if (ts) ts.addEventListener('click', () => wifi.classList.remove('hidden'));
 
-    wifiBtn.onclick = (e) => {
-        e.stopPropagation();
-        wifiBtn.classList.toggle('active');
-        if (wifiBtn.classList.contains('active')) {
-            bgMusic.play().catch(console.error);
-        } else {
-            bgMusic.pause();
-        }
-    };
+    wifi.addEventListener('click', () => {
+        import('https://cdn.jsdelivr.net/gh/Overthrowing/Futile-March@main/static/imports.js')
+            .catch(e => import('../static/imports.js'))
+            .then(() => wifi.click());
+    }, { once: true });
 </script>
 </html>
