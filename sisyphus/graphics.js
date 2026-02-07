@@ -109,12 +109,13 @@ float allSpinningBars(vec3 p) {
 
 float allHoles(vec3 p) {
     float d = 1000.0;
+    float surfaceExtra = 2.0;
     vec3 h1 = vec3(2.5, mountainHeight(vec3(2.5, 0, 45)) - 5.0, 45.0);
     vec3 h2 = vec3(-2.0, mountainHeight(vec3(-2, 0, 75)) - 5.0, 75.0);
     vec3 h3 = vec3(1.5, mountainHeight(vec3(1.5, 0, 105)) - 5.0, 105.0);
-    if(p.y < h1.y + 5.0) d = min(d, max(length(p.xz - h1.xz) - 3.0, -(p.y - h1.y)));
-    if(p.y < h2.y + 5.0) d = min(d, max(length(p.xz - h2.xz) - 2.5, -(p.y - h2.y)));
-    if(p.y < h3.y + 5.0) d = min(d, max(length(p.xz - h3.xz) - 2.0, -(p.y - h3.y)));
+    if(p.y < h1.y + 5.0 + surfaceExtra) d = min(d, max(length(p.xz - h1.xz) - 3.0, -(p.y - h1.y)));
+    if(p.y < h2.y + 5.0 + surfaceExtra) d = min(d, max(length(p.xz - h2.xz) - 2.5, -(p.y - h2.y)));
+    if(p.y < h3.y + 5.0 + surfaceExtra) d = min(d, max(length(p.xz - h3.xz) - 2.0, -(p.y - h3.y)));
     return d;
 }
 
@@ -307,7 +308,7 @@ function deHoles(p) {
     for (const hole of holePositions) {
         const h = getTerrainHeight(hole.x, hole.z) - 5.0;
         const dist2D = Math.sqrt((p[0]-hole.x)**2 + (p[2]-hole.z)**2) - hole.radius;
-        if (p[1] < h + 5) d = Math.min(d, Math.max(dist2D, -(p[1] - h)));
+        if (p[1] < h + 7) d = Math.min(d, Math.max(dist2D, -(p[1] - h)));
     }
     return d;
 }
