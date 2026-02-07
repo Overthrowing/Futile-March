@@ -73,7 +73,7 @@ function Boulder() {
         if (this.pos[2] > this.maxHeight) this.maxHeight = this.pos[2];
         
         if (this.pos[2] < this.maxHeight - 30 && this.maxHeight > 10) {
-            triggerRestart("The boulder escaped!");
+            triggerRestart("Your burden has fled from you...");
         }
         
         this.updateUniforms();
@@ -121,7 +121,7 @@ function Boulder() {
                 this.velocity[0] -= (dx / dist) * pullStrength * dt;
                 this.velocity[2] -= (dz / dist) * pullStrength * dt;
                 
-                if (dist < hole.radius * 0.5) triggerRestart("The boulder fell into a pit!");
+                if (dist < hole.radius * 0.5) triggerRestart("The stone has been swallowed by the void...");
             }
         }
     };

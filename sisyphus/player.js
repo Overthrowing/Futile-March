@@ -46,7 +46,7 @@ function Player() {
         const result = getSpinningBarForce(this.pos);
         if (result.hit) {
             this.velocity = plus(this.velocity, result.force);
-            showMessage("Knocked off!", 1500);
+            showMessage("The mountain tests your resolve...", 1500);
         }
     };
 
@@ -135,7 +135,7 @@ function Player() {
             this.velocity[0] *= -0.5;
         }
 
-        if (this.pos[1] < terrainY - 8) triggerRestart("Fell into the abyss!");
+        if (this.pos[1] < terrainY - 8) triggerRestart("The void claims you, but not your purpose...");
     };
 
     this.handleCollision = (deFn, radius, bounce) => {

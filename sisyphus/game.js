@@ -34,7 +34,7 @@ function fullReset() {
     player.reset(-10);
     boulder.reset(-10);
     boulder.maxHeight = 0;
-    showMessage("Reset!", 1500);
+    showMessage("The cycle begins anew...", 1500);
 }
 
 resetBtn.onclick = (e) => {
@@ -54,14 +54,14 @@ function triggerRestart(reason) {
     if (restartPending) return;
     restartPending = true;
     restartMessage = reason;
-    showMessage(reason + " Walk back to the bottom to restart.", 5000);
+    showMessage(reason + " Descend and embrace your fate once more.", 5000);
     boulder.reset(-5);
 }
 
 function checkRestart() {
     if (restartPending && player.pos[2] < 0) {
         restartPending = false;
-        showMessage("Begin again...", 2000);
+        showMessage("The eternal labor awaits...", 2000);
         boulder.reset(-5);
         boulder.maxHeight = 0;
     }
@@ -69,7 +69,7 @@ function checkRestart() {
 
 function checkVictory() {
     if (boulder.pos[2] >= 150) {
-        showMessage("Victory! But the boulder rolls back...", 4000);
+        showMessage("You've reached the summit... but the gods have other plans.", 4000);
         setTimeout(() => { boulder.reset(-5); player.reset(-10); boulder.maxHeight = 0; }, 4000);
     }
 }
@@ -114,7 +114,7 @@ window.onresize = handleResize;
 if (window.visualViewport) window.visualViewport.onresize = handleResize;
 
 document.addEventListener('pointerlockchange', () => {
-    if (!document.pointerLockElement && gameStarted && !isMobile) showMessage("Click to resume", 1000);
+    if (!document.pointerLockElement && gameStarted && !isMobile) showMessage("Click to continue your burden", 1000);
 });
 
 document.addEventListener('keydown', (e) => {
@@ -215,9 +215,10 @@ renderer.draw();
 update();
 
 console.log(`
-╔═══════════════════════════════════════╗
-║           SISYPHUS                    ║
-║  WASD - Move | SPACE - Jump | R - Reset║
-║  One must imagine Sisyphus happy.     ║
-╚═══════════════════════════════════════╝
+╔═══════════════════════════════════════════════════╗
+║              THE MYTH OF SISYPHUS                 ║
+║   WASD - Move | SPACE - Jump | R - Embrace Fate   ║
+║   "The struggle itself toward the heights         ║
+║    is enough to fill a man's heart."              ║
+╚═══════════════════════════════════════════════════╝
 `);
