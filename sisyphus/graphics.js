@@ -1,5 +1,15 @@
 let renderer = new Renderer(
 `
+float fbm2(vec2 p) {
+    float f = 0.0;
+    mat2 m2 = mat2(0.8, -0.6, 0.6, 0.8);
+    f += 0.5 * noise(vec3(p, 0.0)); p = m2 * p * 2.02;
+    f += 0.25 * noise(vec3(p, 0.0)); p = m2 * p * 2.03;
+    f += 0.125 * noise(vec3(p, 0.0)); p = m2 * p * 2.01;
+    f += 0.0625 * noise(vec3(p, 0.0));
+    return f / 0.9375;
+}
+
 float mountainHeight(vec3 p) {
     return max(-5.0, p.z * 0.3 + sin(p.x * 0.1) * 2.0 + sin(p.z * 0.05) * 3.0);
 }
@@ -26,8 +36,20 @@ float mountain(vec3 p) {
     float rocky = fbm(p * 0.15) * 0.3;
     float bumps = bumpySection(p);
     float ground = p.y - h - rocky - bumps;
-    float pathWidth = 6.0, pathDepth = 0.5, pathDist = abs(p.x);
-    return ground + smoothstep(pathWidth, pathWidth - 1.0, pathDist) * pathDepth;
+    
+    // Add extra mountains outside the path
+    float pathDist = abs(p.x);
+    float pathWidth = 6.0, pathDepth = 0.5;
+    float pathCarve = smoothstep(pathWidth, pathWidth - 1.0, pathDist) * pathDepth;
+    
+    // Side mountains - higher terrain outside path (pushed back to avoid clipping)
+    float sideMountains = 0.0;
+    if(pathDist > 10.0) {
+        float sideHeight = 10.0 * fbm2(p.xz * 0.04) + 5.0 * fbm2(p.xz * 0.08);
+        sideMountains = -sideHeight * smoothstep(10.0, 20.0, pathDist);
+    }
+    
+    return ground + pathCarve + sideMountains;
 }
 
 float spinningBar(vec3 p, vec3 barPos, float barAngle) {
@@ -164,70 +186,198 @@ float de(vec3 p) {
 `,
 
 `
+// Sun and lighting setup
+vec3 sunDir = normalize(vec3(0.8, 0.4, 0.6));
+float sundot = clamp(dot(dir, sunDir), 0.0, 1.0);
+
+// Sky colors - bright daylight
+vec3 blueSky = vec3(0.4, 0.65, 0.9);
+vec3 warmSky = vec3(0.95, 0.88, 0.75);
+vec3 horizonCol = vec3(0.95, 0.85, 0.9);
+
 vec3 col = vec3(0.0);
-vec3 skyCol = vec3(0.02, 0.01, 0.05);
 
 if(dist <= MIN_DIST) {
     vec3 norm = grad(p);
     float occ = ao(p, norm);
-    vec3 lightDir = normalize(vec3(0.5, 0.8, -0.3));
-    vec3 lightDir2 = normalize(vec3(-0.3, 0.5, 0.5));
-    float diff = max(dot(norm, lightDir), 0.0);
-    float diff2 = max(dot(norm, lightDir2), 0.0) * 0.3;
+    
+    // Main sun light - brighter to match sky
+    float diff = max(dot(norm, sunDir), 0.0);
+    // Fill light from opposite side
+    vec3 fillDir = normalize(vec3(-0.3, 0.5, -0.5));
+    float fill = max(dot(norm, fillDir), 0.0) * 0.35;
+    // Ambient - brighter base
+    float amb = 0.25 + 0.15 * norm.y;
     
     if(mountain(p) < 0.01) {
-        vec3 rockCol = mix(vec3(0.25, 0.2, 0.18), vec3(0.35, 0.3, 0.25), fbm(p * 2.0));
-        rockCol = mix(rockCol, vec3(0.4, 0.35, 0.3), smoothstep(6.0, 4.0, abs(p.x)) * 0.3);
-        col = rockCol * (0.3 + diff * 0.5 + diff2) * occ;
-        col = mix(col, col * vec3(0.8, 0.85, 1.0), smoothstep(0.0, 50.0, p.y) * 0.3);
+        // Base rock color with texture variation
+        vec3 rockCol = mix(vec3(0.35, 0.3, 0.25), vec3(0.5, 0.45, 0.38), fbm(p * 1.5));
+        
+        // Path is lighter
+        float onPath = smoothstep(6.0, 4.0, abs(p.x));
+        rockCol = mix(rockCol, vec3(0.55, 0.5, 0.45), onPath * 0.4);
+        
+        // Side mountains - multi-colored bands based on height
+        float sideFade = smoothstep(10.0, 18.0, abs(p.x));
+        if(sideFade > 0.0) {
+            // Height with noise variation
+            float mountainH = p.y + fbm(p * 0.3) * 3.0;
+            float vegNoise = fbm(p * 0.8);
+            
+            // Grass/forest green colors - varied
+            vec3 grassCol = mix(vec3(0.2, 0.35, 0.15), vec3(0.28, 0.42, 0.18), vegNoise);
+            vec3 forestCol = mix(vec3(0.15, 0.28, 0.12), vec3(0.22, 0.35, 0.15), fbm(p * 1.2));
+            
+            // Mid altitude - mix of vegetation and rock
+            vec3 midRockCol = mix(vec3(0.4, 0.35, 0.28), vec3(0.48, 0.42, 0.35), fbm(p * 2.0));
+            vec3 midGreenCol = mix(vec3(0.25, 0.32, 0.2), vec3(0.3, 0.38, 0.22), vegNoise);
+            
+            // High altitude - grey rock with alpine vegetation patches
+            vec3 highCol = vec3(0.5, 0.5, 0.52);
+            vec3 alpineGreen = vec3(0.22, 0.3, 0.2);
+            
+            // Peak - snow caps
+            vec3 snowCol = vec3(0.95, 0.97, 1.0);
+            
+            // Start with low vegetation (dense forest/grass)
+            vec3 sideCol = mix(forestCol, grassCol, smoothstep(0.0, 10.0, mountainH));
+            
+            // Mid altitude: patches of green mixed with rock (tree line)
+            float midVegAmount = (0.5 + 0.5 * sin(p.x * 2.0 + vegNoise * 6.0)) * smoothstep(25.0, 15.0, mountainH);
+            vec3 midBlend = mix(midRockCol, midGreenCol, midVegAmount * 0.7);
+            sideCol = mix(sideCol, midBlend, smoothstep(8.0, 20.0, mountainH));
+            
+            // High altitude: rock with sparse alpine patches
+            float alpinePatches = smoothstep(0.55, 0.65, vegNoise) * smoothstep(40.0, 28.0, mountainH);
+            vec3 highBlend = mix(highCol, alpineGreen, alpinePatches * 0.4);
+            sideCol = mix(sideCol, highBlend, smoothstep(22.0, 35.0, mountainH));
+            
+            // Snow on peaks - based on height and upward-facing surfaces
+            float snowAmount = smoothstep(32.0, 48.0, mountainH);
+            snowAmount *= pow(max(dot(norm, vec3(0.0, 1.0, 0.0)), 0.0), 1.5);
+            snowAmount += smoothstep(42.0, 58.0, mountainH) * 0.6;
+            sideCol = mix(sideCol, snowCol, clamp(snowAmount, 0.0, 1.0));
+            
+            rockCol = mix(rockCol, sideCol, sideFade);
+        }
+        
+        col = rockCol * (amb + diff * 0.7 + fill) * occ;
+        
+        // Height-based atmospheric tint
+        col = mix(col, col * vec3(0.9, 0.95, 1.05), smoothstep(0.0, 60.0, p.y) * 0.25);
     }
     else if(allSpinningBars(p) < 0.01) {
-        vec3 metalCol = vec3(0.6, 0.55, 0.5);
-        float spec = pow(max(dot(reflect(-lightDir, norm), normalize(camPos - p)), 0.0), 32.0);
-        col = metalCol * (0.4 + diff * 0.4) + vec3(spec * 0.3);
-        col += vec3(0.8, 0.2, 0.1) * (0.2 + 0.1 * sin(t * 5.0));
+        vec3 metalCol = vec3(0.7, 0.65, 0.6);
+        float spec = pow(max(dot(reflect(-sunDir, norm), normalize(camPos - p)), 0.0), 32.0);
+        col = metalCol * (amb + diff * 0.6) + vec3(1.0, 0.95, 0.9) * spec * 0.5;
+        col += vec3(0.95, 0.35, 0.15) * (0.12 + 0.08 * sin(t * 5.0));
     }
     else if(allBoxes(p) < 0.01) {
-        vec3 boxCol = mix(vec3(0.45, 0.38, 0.32), vec3(0.55, 0.48, 0.4), noise(p * 5.0));
+        vec3 boxCol = mix(vec3(0.5, 0.43, 0.36), vec3(0.62, 0.55, 0.46), noise(p * 5.0));
         boxCol += vec3(0.1) * (1.0 - smoothstep(0.0, 0.1, allBoxes(p + norm * 0.05)));
-        col = boxCol * (0.4 + diff * 0.5 + diff2 * 0.2) * occ;
+        col = boxCol * (amb + diff * 0.6 + fill) * occ;
     }
     else if(allFloorBeams(p) < 0.01) {
-        vec3 woodCol = vec3(0.3, 0.22, 0.15);
-        woodCol = mix(woodCol, vec3(0.4, 0.3, 0.2), (sin(p.x * 20.0 + noise(p * 3.0) * 5.0) * 0.5 + 0.5) * 0.3);
-        col = woodCol * (0.5 + diff * 0.4) * occ;
+        vec3 woodCol = vec3(0.38, 0.28, 0.18);
+        woodCol = mix(woodCol, vec3(0.5, 0.38, 0.26), (sin(p.x * 20.0 + noise(p * 3.0) * 5.0) * 0.5 + 0.5) * 0.3);
+        col = woodCol * (amb + diff * 0.55) * occ;
     }
     else if(boulder(p) < 0.01) {
         vec3 q = boulderRotMat * (p - boulderPos);
-        vec3 stoneCol = mix(vec3(0.5, 0.45, 0.4), vec3(0.6, 0.55, 0.5), fbm(q * 0.5));
-        col = stoneCol * (0.4 + diff * 0.5 + diff2 * 0.3) * occ;
+        vec3 stoneCol = mix(vec3(0.55, 0.5, 0.45), vec3(0.68, 0.62, 0.56), fbm(q * 0.5));
+        col = stoneCol * (amb + diff * 0.6 + fill * 0.4) * occ;
         float ringDist = boulderRings(q);
-        if(ringDist < 0.5) col += vec3(0.9, 0.7, 0.3) * (0.5 - ringDist) * (0.5 + 0.5 * sin(t * 2.0));
-        col += vec3(0.8, 0.6, 0.2) * isPushing * 0.3;
+        if(ringDist < 0.5) col += vec3(1.0, 0.8, 0.4) * (0.5 - ringDist) * (0.5 + 0.5 * sin(t * 2.0));
+        col += vec3(0.9, 0.7, 0.3) * isPushing * 0.2;
     }
     else if(player(p) < 0.01) {
         vec3 q = rotY(p - playerPos, -playerAngle.x);
         vec3 bodyP = rotX(q, uBodyAngle.y);
-        vec3 skinCol = vec3(0.7, 0.55, 0.45);
+        vec3 skinCol = vec3(0.78, 0.62, 0.52);
         if(playerHead(bodyP) < 0.01) {
-            col = skinCol * (0.5 + diff * 0.4);
+            col = skinCol * (amb + diff * 0.5);
             float eyeR = sdSphere(bodyP - uHeadPos - vec3(0.08, 0.45, 0.12), 0.03);
             float eyeL = sdSphere(bodyP - uHeadPos - vec3(-0.08, 0.45, 0.12), 0.03);
             if(min(eyeR, eyeL) < 0.01) col = vec3(0.1);
         }
         else if(playerBody(bodyP) < 0.01) {
-            col = mix(vec3(0.75, 0.7, 0.6) * (0.4 + diff * 0.5), vec3(0.8, 0.5, 0.4), isPushing * 0.2);
+            vec3 clothCol = vec3(0.82, 0.76, 0.66);
+            col = mix(clothCol * (amb + diff * 0.55), vec3(0.88, 0.6, 0.5), isPushing * 0.12);
         }
-        else col = skinCol * (0.5 + diff * 0.4);
+        else col = skinCol * (amb + diff * 0.5);
     }
-    col = mix(col, skyCol, 1.0 - exp(-totDist * 0.003));
+    
+    // Fog - blends toward bright sky/sun color
+    float fo = 1.0 - exp(-totDist * 0.006);
+    vec3 fogCol = mix(blueSky, warmSky, pow(sundot, 4.0));
+    col = mix(col, fogCol, fo);
+    
 } else {
-    col = stars(dir) + skyCol + vec3(0.1, 0.05, 0.15) * (1.0 - abs(dir.y));
+    // Sky gradient
+    vec3 sky = mix(blueSky, warmSky, 1.5 * pow(sundot, 8.0));
+    col = sky * (1.0 - 0.7 * dir.y);
+    
+    // Enhanced stars - layered noise-based approach like reference shader
+    float starVisibility = pow(1.0 - max(sundot, 0.0), 2.0) * max(dir.y, 0.0);
+    if(starVisibility > 0.01) {
+        // Multiple layers of stars at different scales
+        float s1 = noise(vec3(dir.xz * 80.0, 0.0));
+        float s2 = noise(vec3(dir.xz * 160.0, 1.0));
+        float s3 = noise(vec3(dir.xz * 320.0, 2.0));
+        
+        // Sharp star points using high power
+        float starField = pow(s1, 18.0) * 0.8 + pow(s2, 20.0) * 0.5 + pow(s3, 22.0) * 0.3;
+        
+        // Color variation - some stars warmer, some cooler
+        float starHue = noise(vec3(dir.xz * 40.0, 3.0));
+        vec3 starCol = mix(vec3(0.8, 0.85, 1.0), vec3(1.0, 0.95, 0.8), starHue);
+        
+        // Twinkling effect
+        float twinkle = 0.7 + 0.3 * sin(t * 3.0 + s1 * 50.0);
+        
+        col += starCol * starField * starVisibility * twinkle * 0.15;
+    }
+    
+    // Also keep original star hash for variety
+    col += stars(dir) * starVisibility * 0.3;
+    
+    // Sun glow
+    col += vec3(1.0, 0.9, 0.7) * 0.15 * pow(sundot, 2.0);
+    col += vec3(1.0, 0.95, 0.85) * 0.25 * pow(sundot, 8.0);
+    col += vec3(1.0, 1.0, 0.95) * pow(sundot, 256.0);
+    
+    // Clouds
+    float cloudSpeed = 0.008;
+    vec2 cloudUV = dir.xz / (dir.y + 0.3) * 15.0 + t * cloudSpeed * 20.0;
+    float cloud1 = fbm2(cloudUV * 0.05 + fbm2(cloudUV * 0.03));
+    float cloud2 = fbm2(cloudUV * 0.08 + 10.0);
+    float clouds = smoothstep(0.45, 0.75, cloud1) * 0.6 + smoothstep(0.5, 0.8, cloud2) * 0.3;
+    
+    vec3 cloudCol = mix(vec3(1.0, 0.98, 0.95), warmSky * 0.9, pow(sundot, 2.0));
+    col = mix(col, cloudCol, clouds * max(dir.y, 0.0));
+    
+    // Horizon glow
+    col = mix(col, horizonCol * 0.95, pow(1.0 - max(dir.y + 0.1, 0.0), 8.0));
 }
 
-col += vec3(0.9, 0.7, 0.3) * 0.4 / (1.0 + minGlow * minGlow * 0.5) * 0.15;
-col *= 1.0 - 0.3 * length(pos4.xy);
-col = pow(col / (1.0 + col), vec3(0.9));
+// Boulder glow bloom
+float glowIntensity = 0.35 / (1.0 + minGlow * minGlow * 0.5);
+col += vec3(0.95, 0.75, 0.35) * glowIntensity * 0.12;
+
+// Contrast enhancement
+col = clamp(col, 0.0, 1.0);
+col = col * col * (3.0 - 2.0 * col);
+
+// Slight saturation boost
+float sat = 0.15;
+col = col * (1.0 + sat) - sat * dot(col, vec3(0.33));
+
+// Vignette
+col *= 1.0 - 0.25 * dot(pos4.xy, pos4.xy);
+
+// Tone mapping
+col = pow(col / (1.0 + col * 0.5), vec3(0.95));
+
 color = vec4(col, 1.0);
 `,
 
