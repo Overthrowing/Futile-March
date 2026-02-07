@@ -1,0 +1,23 @@
+{
+    "name": "Sisyphus",
+    "short_name": "Sisyphus",
+    "description": "Push the boulder up the mountain. A raymarching game inspired by the myth of Sisyphus.",
+    "start_url": "./game.html",
+    "display": "fullscreen",
+    "orientation": "any",
+    "background_color": "#0a0a0f",
+    "theme_color": "#0a0a0f",
+    "categories": ["games"],
+    "icons": [
+        {
+            "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%230a0a0f'/%3E%3Ccircle cx='96' cy='96' r='70' fill='none' stroke='%23d4af37' stroke-width='8'/%3E%3Ccircle cx='96' cy='96' r='40' fill='%23d4af37'/%3E%3C/svg%3E",
+            "sizes": "192x192",
+            "type": "image/svg+xml"
+        },
+        {
+            "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%230a0a0f'/%3E%3Ccircle cx='256' cy='256' r='180' fill='none' stroke='%23d4af37' stroke-width='16'/%3E%3Ccircle cx='256' cy='256' r='100' fill='%23d4af37'/%3E%3C/svg%3E",
+            "sizes": "512x512",
+            "type": "image/svg+xml"
+        }
+    ]
+}
