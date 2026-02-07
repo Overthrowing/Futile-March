@@ -61,5 +61,5 @@ if __name__ == "__main__":
     pack_project(
         base_dir="./sisyphus",      # Folder containing your assets
         html_file="game.html",      # Main HTML file inside that folder
-        output_file="bundled/minified.html"
+        output_file="bundled/index.html"
     )

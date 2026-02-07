@@ -1,4 +1,4 @@
 ```
-tar -cf minified.tar minified.html
-brotli minified.tar
+tar -cf index.tar index.html
+brotli index.tar
 ```
