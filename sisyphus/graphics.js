@@ -273,9 +273,37 @@ if(dist <= MIN_DIST) {
         col += vec3(0.95, 0.35, 0.15) * (0.12 + 0.08 * sin(t * 5.0));
     }
     else if(allBoxes(p) < 0.01) {
-        vec3 boxCol = mix(vec3(0.5, 0.43, 0.36), vec3(0.62, 0.55, 0.46), noise(p * 5.0));
-        boxCol += vec3(0.1) * (1.0 - smoothstep(0.0, 0.1, allBoxes(p + norm * 0.05)));
-        col = boxCol * (amb + diff * 0.6 + fill) * occ;
+        // Wooden crate appearance
+        vec3 woodBase = vec3(0.55, 0.35, 0.18);
+        vec3 woodLight = vec3(0.72, 0.52, 0.28);
+        vec3 woodDark = vec3(0.35, 0.22, 0.1);
+        
+        // Wood grain along planks
+        float grain = sin(p.y * 40.0 + noise(p * 8.0) * 8.0) * 0.5 + 0.5;
+        grain *= sin(p.x * 3.0 + p.z * 3.0 + noise(p * 2.0) * 2.0) * 0.3 + 0.7;
+        vec3 crateCol = mix(woodBase, woodLight, grain * 0.4);
+        
+        // Plank lines - horizontal and vertical slats
+        float plankX = abs(fract(p.x * 1.5) - 0.5);
+        float plankY = abs(fract(p.y * 1.5) - 0.5);
+        float plankZ = abs(fract(p.z * 1.5) - 0.5);
+        float planks = min(min(plankX, plankY), plankZ);
+        float plankEdge = smoothstep(0.02, 0.06, planks);
+        crateCol = mix(woodDark, crateCol, plankEdge);
+        
+        // Darker gaps between planks
+        float gaps = smoothstep(0.0, 0.015, planks);
+        crateCol *= 0.6 + 0.4 * gaps;
+        
+        // Edge darkening for 3D depth
+        float edgeDist = allBoxes(p + norm * 0.08);
+        float edgeDarken = smoothstep(0.0, 0.12, edgeDist);
+        crateCol = mix(woodDark * 0.7, crateCol, edgeDarken);
+        
+        // Subtle weathering/wear
+        crateCol *= 0.85 + 0.15 * noise(p * 12.0);
+        
+        col = crateCol * (amb + diff * 0.65 + fill) * occ;
     }
     else if(allFloorBeams(p) < 0.01) {
         vec3 woodCol = vec3(0.38, 0.28, 0.18);
