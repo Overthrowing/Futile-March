@@ -1,5 +1,5 @@
 let renderer = new Renderer(
-`
+    `
 float fbm2(vec2 p) {
     float f = 0.0;
     mat2 m2 = mat2(0.8, -0.6, 0.6, 0.8);
@@ -162,7 +162,7 @@ float allBoxes(vec3 p) {
 
 float allFloorBeams(vec3 p) {
     float d = 1000.0;
-    d = min(d, floorBeam(p, vec3(0.0, mountainHeight(vec3(0,0,10)) + 0.15, 10.0), 4.0));
+    d = min(d, floorBeam(p, vec3(0.0, mountainHeight(vec3(0,0,10)) + 0.15, 10.0), 2.5));
     d = min(d, floorBeam(p, vec3(-1.0, mountainHeight(vec3(-1,0,35)) + 0.15, 35.0), 3.5));
     d = min(d, floorBeam(p, vec3(1.5, mountainHeight(vec3(1.5,0,52)) + 0.15, 52.0), 3.0));
     d = min(d, floorBeam(p, vec3(0.0, mountainHeight(vec3(0,0,68)) + 0.15, 68.0), 4.5));
@@ -185,7 +185,7 @@ float de(vec3 p) {
 }
 `,
 
-`
+    `
 // Sun and lighting setup
 vec3 sunDir = normalize(vec3(0.8, 0.4, 0.6));
 float sundot = clamp(dot(dir, sunDir), 0.0, 1.0);
@@ -429,9 +429,9 @@ col = pow(col / (1.0 + col * 0.5), vec3(0.95));
 color = vec4(col, 1.0);
 `,
 
-``,
+    ``,
 
-`
+    `
 uniform vec3 uhip1; uniform vec3 ujr1; uniform vec3 ujr2; uniform vec3 ujr3;
 uniform vec3 uhip2; uniform vec3 ujl1; uniform vec3 ujl2; uniform vec3 ujl3;
 uniform vec3 uChestPos; uniform vec3 uHeadPos; uniform float uLift; uniform vec3 uBodyAngle;
@@ -447,14 +447,14 @@ const boxObstacles = [
 ];
 
 const floorBeams = [
-    { x: 0.0, z: 10, width: 4.0 }, { x: -1.0, z: 35, width: 3.5 }, { x: 1.5, z: 52, width: 3.0 },
+    { x: 0.0, z: 10, width: 2.5 }, { x: -1.0, z: 35, width: 3.5 }, { x: 1.5, z: 52, width: 3.0 },
     { x: 0.0, z: 68, width: 4.5 }, { x: -0.5, z: 82, width: 3.5 }, { x: 0.5, z: 98, width: 4.0 },
     { x: -1.0, z: 112, width: 3.0 }, { x: 0.0, z: 125, width: 5.0 }
 ];
 
 const barPositions = [
     { z: 30, speed: 1.5, offset: 0 }, { z: 60, speed: -2.0, offset: 0 },
-    { z: 90, speed: 1.2, offset: Math.PI/2 }, { z: 120, speed: -1.8, offset: Math.PI/4 }
+    { z: 90, speed: 1.2, offset: Math.PI / 2 }, { z: 120, speed: -1.8, offset: Math.PI / 4 }
 ];
 
 const holePositions = [
@@ -473,7 +473,7 @@ function deSpinningBars(p) {
         const h = getTerrainHeight(0, bar.z) + 1.5;
         const angle = t * bar.speed + bar.offset;
         const rotated = rotY(plus(p, [0, -h, -bar.z]), angle);
-        d = Math.min(d, Math.min(sdCapsule3D(rotated, [-4,0,0], [4,0,0], 0.3), sdCylinder3D(rotated, 3, 0.2)));
+        d = Math.min(d, Math.min(sdCapsule3D(rotated, [-4, 0, 0], [4, 0, 0], 0.3), sdCylinder3D(rotated, 3, 0.2)));
     }
     return d;
 }
@@ -505,7 +505,7 @@ function deHoles(p) {
     let d = Infinity;
     for (const hole of holePositions) {
         const h = getTerrainHeight(hole.x, hole.z) - 5.0;
-        const dist2D = Math.sqrt((p[0]-hole.x)**2 + (p[2]-hole.z)**2) - hole.radius;
+        const dist2D = Math.sqrt((p[0] - hole.x) ** 2 + (p[2] - hole.z) ** 2) - hole.radius;
         if (p[1] < h + 7) d = Math.min(d, Math.max(dist2D, -(p[1] - h)));
     }
     return d;
@@ -526,8 +526,8 @@ function getSpinningBarForce(p) {
         const h = getTerrainHeight(0, bar.z) + 1.5;
         const angle = t * bar.speed + bar.offset;
         const rotated = rotY(plus(p, [0, -h, -bar.z]), angle);
-        if (sdCapsule3D(rotated, [-4,0,0], [4,0,0], 0.3) < 1.0) {
-            const tangent = rotY([0, 0, 1], angle + Math.PI/2);
+        if (sdCapsule3D(rotated, [-4, 0, 0], [4, 0, 0], 0.3) < 1.0) {
+            const tangent = rotY([0, 0, 1], angle + Math.PI / 2);
             return { hit: true, force: [tangent[0] * bar.speed * 15, 10, tangent[2] * bar.speed * 15] };
         }
     }
@@ -536,14 +536,14 @@ function getSpinningBarForce(p) {
 
 function isOverHole(x, z) {
     for (const hole of holePositions) {
-        if (Math.sqrt((x-hole.x)**2 + (z-hole.z)**2) < hole.radius) return true;
+        if (Math.sqrt((x - hole.x) ** 2 + (z - hole.z) ** 2) < hole.radius) return true;
     }
     return false;
 }
 
 function getHoleInfo(x, z) {
     for (const hole of holePositions) {
-        if (Math.sqrt((x-hole.x)**2 + (z-hole.z)**2) < hole.radius * 1.5) return hole;
+        if (Math.sqrt((x - hole.x) ** 2 + (z - hole.z) ** 2) < hole.radius * 1.5) return hole;
     }
     return null;
 }
