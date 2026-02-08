@@ -6,6 +6,8 @@ Sisyphus is a browser-based raymarching game inspired by the myth of Sisyphus. T
 
 [https://overthrowing.github.io/Futile-March/](https://overthrowing.github.io/Futile-March/)
 
+Winner of the AppLovin "How did you think of this" track at TartanHacks 2026! 
+
 ## Features
 
 -   **Raymarching Engine**: Custom WebGL rendering engine using signed distance functions (SDFs) to create the terrain and boulder.
