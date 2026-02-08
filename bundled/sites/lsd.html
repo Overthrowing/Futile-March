@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fractal Cartoon Flight</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; cursor: none; }
+  #hud {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 20px 30px; pointer-events: none; z-index: 10;
+    font-family: 'Courier New', monospace; opacity: 0; transition: opacity 0.5s;
+  }
+  #hud.show { opacity: 1; }
+  #hud > div { color: #fff; text-shadow: 0 0 10px rgba(255,150,0,0.8), 0 0 20px rgba(255,100,0,0.4); }
+  #score-display { font-size: 28px; font-weight: bold; letter-spacing: 2px; }
+  #speed-display { font-size: 16px; opacity: 0.7; margin-top: 4px; }
+  #health-bar-outer {
+    width: 200px; height: 8px; background: rgba(255,255,255,0.15);
+    border-radius: 4px; overflow: hidden; margin-top: 8px;
+  }
+  #health-bar { width: 100%; height: 100%; background: linear-gradient(90deg, #ff3030, #ffaa00, #00ff80); border-radius: 4px; transition: width 0.3s; }
+  #message {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    color: #fff; font-family: 'Courier New', monospace; font-size: 20px;
+    text-align: center; pointer-events: none; z-index: 20;
+    text-shadow: 0 0 15px rgba(255,150,0,0.9);
+    line-height: 1.6; opacity: 0; transition: opacity 0.5s; white-space: pre-line;
+  }
+  #message.show { opacity: 1; }
+  #start-screen {
+    position: fixed; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; z-index: 30;
+    background: radial-gradient(ellipse at center, rgba(80,0,160,0.85), rgba(0,0,0,0.95));
+    cursor: pointer;
+  }
+  #start-screen h1 {
+    font-family: 'Courier New', monospace; font-size: clamp(28px, 5vw, 52px);
+    color: #fff; text-shadow: 0 0 30px #f80, 0 0 60px #a0f;
+    letter-spacing: 4px; margin-bottom: 10px;
+  }
+  #start-screen p {
+    font-family: 'Courier New', monospace; font-size: 16px;
+    color: rgba(255,255,255,0.6); margin-top: 8px;
+  }
+  #start-screen .controls {
+    margin-top: 30px; font-family: 'Courier New', monospace;
+    font-size: 13px; color: rgba(255,255,255,0.4); line-height: 1.8;
+  }
+  #start-screen .blink {
+    margin-top: 40px; font-family: 'Courier New', monospace;
+    font-size: 18px; color: #ffaa00;
+    animation: blink 1.2s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+</style>
+</head>
+<body>
+<div id="start-screen">
+  <h1>FRACTAL FLIGHT</h1>
+  <p>Navigate the fractal tunnels</p>
+  <div class="controls">
+    WASD / Arrow Keys — Steer<br>
+    SHIFT — Boost &nbsp;|&nbsp; SPACE — Brake<br>
+    Mouse — Fine control
+  </div>
+  <div class="blink">[ CLICK TO FLY ]</div>
+</div>
+<div id="hud">
+  <div>
+    <div id="score-display">0</div>
+    <div id="speed-display">SPD 1.0x</div>
+  </div>
+  <div style="text-align:right">
+    <div style="font-size:13px;opacity:0.6;margin-bottom:4px;color:#fff">HULL</div>
+    <div id="health-bar-outer"><div id="health-bar"></div></div>
+  </div>
+</div>
+<div id="message"></div>
+<canvas id="glCanvas"></canvas>
+
+<script>
+// ============================================================
+// GAME STATE
+// ============================================================
+const game = {
+  started: false,
+  over: false,
+  score: 0,
+  health: 100,
+  speed: 1.0,
+  baseSpeed: 3.0,
+  px: -1.0, py: 0.5, pz: 0.0,
+  vx: 0.0, vy: 0.0,
+  roll: 0.0, yaw: 0.0, pitch: 0.0,
+  flash: 0.0,
+  hitCooldown: 0,
+  time: 0, dt: 0,
+};
+
+const keys = {};
+let mouseDX = 0, mouseDY = 0, pointerLocked = false;
+
+document.addEventListener('keydown', e => { keys[e.code] = true; });
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+document.addEventListener('mousemove', e => {
+  if (pointerLocked) {
+    mouseDX += e.movementX * 0.003;
+    mouseDY += e.movementY * 0.003;
+  }
+});
+
+const canvas = document.getElementById('glCanvas');
+const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+if (!gl) {
+  document.body.innerHTML = '<p style="color:#fff;padding:2em;">WebGL not supported.</p>';
+  throw new Error('No WebGL');
+}
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  gl.viewport(0, 0, canvas.width, canvas.height);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Start
+document.getElementById('start-screen').addEventListener('click', () => {
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('hud').classList.add('show');
+  game.started = true;
+  canvas.requestPointerLock();
+  initAudio();
+});
+document.addEventListener('pointerlockchange', () => {
+  pointerLocked = document.pointerLockElement === canvas;
+});
+canvas.addEventListener('click', () => {
+  if (game.started && !pointerLocked) canvas.requestPointerLock();
+  if (game.over) restartGame();
+});
+
+// ============================================================
+// PLACEHOLDER TEXTURES
+// ============================================================
+function makeTex() {
+  const t = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0,0,0,0]));
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  return t;
+}
+const audioTex = makeTex(), nyanTex = makeTex();
+
+// ============================================================
+// SHADERS
+// ============================================================
+const vsSource = `
+attribute vec2 aPosition;
+void main() { gl_Position = vec4(aPosition, 0.0, 1.0); }
+`;
+
+const fsSource = `
+#ifdef GL_ES
+precision highp float;
+#endif
+
+uniform float iTime;
+uniform vec2 iResolution;
+uniform vec3 uPlayerPos;
+uniform float uPlayerRoll;
+uniform float uPlayerYaw;
+uniform float uPlayerPitch;
+uniform float uFlash;
+uniform float uSpeed;
+uniform float uHealth;
+uniform sampler2D iChannel0;
+uniform sampler2D iChannel1;
+
+#define WAVES
+#define BORDER
+#define RAY_STEPS 100
+#define BRIGHTNESS 1.2
+#define GAMMA 1.4
+#define SATURATION 0.65
+#define detail 0.001
+
+float det = 0.0;
+float tt;
+
+mat2 rot(float a) { return mat2(cos(a),sin(a),-sin(a),cos(a)); }
+
+vec4 formula(vec4 p) {
+  p.xz = abs(p.xz+1.0)-abs(p.xz-1.0)-p.xz;
+  p.y -= 0.25;
+  p.xy *= rot(radians(35.0));
+  p = p*2.0/clamp(dot(p.xyz,p.xyz),0.2,1.0);
+  return p;
+}
+
+float de(vec3 pos) {
+#ifdef WAVES
+  pos.y += sin(pos.z - tt*6.0)*0.15;
+#endif
+  vec3 tpos=pos;
+  tpos.z = abs(3.0 - mod(tpos.z,6.0));
+  vec4 p = vec4(tpos,1.0);
+  for(int i=0;i<4;i++) p=formula(p);
+  float fr = (length(max(vec2(0.0),p.yz-1.5))-1.0)/p.w;
+
+  float ro = max(abs(pos.x+1.0)-0.3, pos.y-0.35);
+  ro = max(ro, -max(abs(pos.x+1.0)-0.1, pos.y-0.5));
+  pos.z = abs(0.25-mod(pos.z,0.5));
+  ro = max(ro, -max(abs(pos.z)-0.2, pos.y-0.3));
+  ro = max(ro, -max(abs(pos.z)-0.01, -pos.y+0.32));
+  float d = min(fr,ro);
+
+  // Crystal pillars
+  vec3 opos = pos;
+  float rep=4.0;
+  float oz = mod(opos.z+rep*0.5,rep)-rep*0.5;
+  float ox = mod(opos.x+1.5,3.0)-1.5;
+  float ang = opos.z*0.5+tt*2.0;
+  vec2 rc = vec2(ox, opos.y-0.15);
+  rc *= rot(ang);
+  float crystal = max(abs(rc.x),abs(rc.y))-0.06;
+  crystal = max(crystal, abs(oz)-0.3);
+  d = min(d, crystal);
+
+  // Spinning rings
+  float rz = mod(opos.z+2.0,8.0)-4.0;
+  float ringR = length(vec2(opos.x+1.0, opos.y-0.2))-0.25;
+  float ring = max(abs(ringR)-0.015, abs(rz)-0.015);
+  d = min(d, ring);
+
+  // Asteroids - tumbling octahedrons on a 3D grid
+  {
+    vec3 acell = vec3(2.5, 1.8, 4.0);
+    vec3 aid = floor((pos + acell*0.5) / acell);
+    vec3 aloc = mod(pos + acell*0.5, acell) - acell*0.5;
+
+    // Hash per cell
+    float h1 = fract(sin(dot(aid, vec3(127.1,311.7,74.7)))*43758.5);
+    float h2 = fract(sin(dot(aid, vec3(269.5,183.3,421.1)))*28461.1);
+    float h3 = fract(sin(dot(aid, vec3(419.2,371.9,622.3)))*61537.9);
+
+    if (h1 > 0.45) {
+      // Offset so not grid-aligned
+      vec3 aoff = (vec3(h1, h2, h3) - 0.5) * acell * 0.5;
+      vec3 ap = aloc - aoff;
+
+      // Tumble
+      float ta1 = tt*(1.0 + h1*2.0) + h2*6.28;
+      float ta2 = tt*(0.7 + h2*1.5) + h3*6.28;
+      ap.xy *= rot(ta1);
+      ap.yz *= rot(ta2);
+
+      // Octahedron SDF: |x|+|y|+|z| - size
+      float asize = 0.08 + h1*0.12;
+      float ast = (abs(ap.x)+abs(ap.y)+abs(ap.z) - asize) * 0.577;
+      d = min(d, ast);
+    }
+  }
+
+  return d;
+}
+
+float edge=0.0;
+vec3 normal(vec3 p) {
+  vec3 e=vec3(0.0,det*5.0,0.0);
+  float d1=de(p-e.yxx),d2=de(p+e.yxx);
+  float d3=de(p-e.xyx),d4=de(p+e.xyx);
+  float d5=de(p-e.xxy),d6=de(p+e.xxy);
+  float d=de(p);
+  edge=abs(d-0.5*(d2+d1))+abs(d-0.5*(d4+d3))+abs(d-0.5*(d6+d5));
+  edge=min(1.0,pow(edge,0.55)*15.0);
+  return normalize(vec3(d1-d2,d3-d4,d5-d6));
+}
+
+vec3 raymarch(in vec3 from, in vec3 dir) {
+  edge=0.0;
+  vec3 p;
+  float d=100.0, totdist=0.0;
+  det=detail;
+  for(int i=0;i<RAY_STEPS;i++){
+    if(d>det && totdist<25.0){
+      p=from+totdist*dir;
+      d=de(p);
+      det=detail*exp(0.13*totdist);
+      totdist+=d;
+    }
+  }
+  vec3 col=vec3(0.0);
+  p-=(det-d)*dir;
+  vec3 norm=normal(p);
+  col=(1.0-abs(norm))*max(0.0,1.0-edge*0.8);
+  totdist=clamp(totdist,0.0,26.0);
+
+  vec3 sd=dir; sd.y-=0.02;
+  float sunsize=7.0;
+  float an=atan(sd.x,sd.y)+iTime*1.5;
+  float s=pow(clamp(1.0-length(sd.xy)*sunsize-abs(0.2-mod(an,0.4)),0.0,1.0),0.1);
+  float sb=pow(clamp(1.0-length(sd.xy)*(sunsize-0.2)-abs(0.2-mod(an,0.4)),0.0,1.0),0.1);
+  float sg=pow(clamp(1.0-length(sd.xy)*(sunsize-4.5)-0.5*abs(0.2-mod(an,0.4)),0.0,1.0),3.0);
+  float y=mix(0.45,1.2,pow(smoothstep(0.0,1.0,0.75-sd.y),2.0))*(1.0-sb*0.5);
+
+  vec3 bg=vec3(0.5,0.0,1.0)*((1.0-s)*(1.0-sg)*y+(1.0-sb)*sg*vec3(1.0,0.8,0.15)*3.0);
+  bg+=vec3(1.0,0.9,0.1)*s;
+  bg=max(bg,sg*vec3(1.0,0.9,0.5));
+
+  col=mix(vec3(1.0,0.9,0.3),col,exp(-0.004*totdist*totdist));
+  if(totdist>25.0) col=bg;
+  col=pow(col,vec3(GAMMA))*BRIGHTNESS;
+  col=mix(vec3(length(col)),col,SATURATION);
+  col*=vec3(1.0,0.9,0.85);
+
+  // Boost speed lines
+  if(uSpeed>1.3){
+    float spd=(uSpeed-1.3)*2.0;
+    float li=abs(sin(atan(dir.x,dir.y)*20.0+iTime*30.0));
+    li=pow(li,8.0)*spd*length(dir.xy)*3.0;
+    col+=vec3(1.0,0.8,0.4)*li*0.3;
+  }
+  return col;
+}
+
+vec3 drawPlane(vec2 uv, vec3 col) {
+  float r=uPlayerRoll;
+  vec2 ru=uv; ru*=rot(r*0.4);
+
+  // Wings
+  float w=1.0-smoothstep(0.0,0.004,abs(ru.y+0.28)-0.004-abs(ru.x)*0.08);
+  w*=step(abs(ru.x),0.35)*step(-0.32,ru.y);
+  // Body
+  float b=1.0-smoothstep(0.0,0.005,abs(ru.x)-0.018+ru.y*0.02);
+  b*=step(-0.36,ru.y)*step(ru.y,-0.18);
+  // Tail
+  float tl=1.0-smoothstep(0.0,0.004,abs(ru.y+0.35)-0.004-abs(ru.x)*0.15);
+  tl*=step(abs(ru.x),0.12)*step(-0.39,ru.y);
+
+  float pl=max(max(w,b),tl);
+  vec3 pc=mix(vec3(0.08,0.04,0.12),vec3(0.85,0.55,1.0),pl);
+  col=mix(col,pc,pl*0.9);
+
+  // Engines
+  float e1=exp(-length(ru-vec2(-0.12,-0.31))*45.0);
+  float e2=exp(-length(ru-vec2(0.12,-0.31))*45.0);
+  col+=vec3(1.0,0.5,0.1)*(e1+e2)*(0.5+uSpeed*0.5);
+
+  return col;
+}
+
+vec3 drawHUD(vec2 uv, vec3 col) {
+  float ch=1.0-smoothstep(0.0,0.002,abs(length(uv)-0.02)-0.001);
+  ch+=1.0-smoothstep(0.0,0.001,abs(uv.x))*smoothstep(0.01,0.025,abs(uv.y));
+  ch+=1.0-smoothstep(0.0,0.001,abs(uv.y))*smoothstep(0.01,0.025,abs(uv.x));
+  col=mix(col,vec3(0.4,1.0,0.4),min(ch,1.0)*0.25);
+  return col;
+}
+
+void main(){
+  tt=iTime*0.5;
+  vec2 fc=gl_FragCoord.xy;
+  vec2 uv=fc/iResolution.xy*2.0-1.0;
+  vec2 ou=uv;
+  uv.y*=iResolution.y/iResolution.x;
+
+  float fov=0.9+uSpeed*0.15;
+  vec3 dir=normalize(vec3(uv*fov,-1.0));
+  dir.xy*=rot(uPlayerRoll*0.4);
+  dir.yz*=rot(uPlayerPitch);
+  dir.xz*=rot(uPlayerYaw);
+
+  vec3 from=uPlayerPos;
+  vec3 color=raymarch(from,dir);
+
+  vec2 pu=ou; pu.y*=iResolution.y/iResolution.x;
+  color=drawPlane(pu,color);
+  color=drawHUD(pu,color);
+
+#ifdef BORDER
+  color=mix(vec3(0.0),color,pow(max(0.0,0.95-length(ou*ou*ou*vec2(1.05,1.1))),0.3));
+#endif
+
+  color=mix(color,vec3(1.0,0.1,0.0),uFlash*0.6);
+
+  if(uHealth<0.35){
+    float pulse=sin(iTime*8.0)*0.5+0.5;
+    float vig=length(ou)*1.2;
+    color=mix(color,vec3(0.8,0.0,0.0),vig*pulse*(0.35-uHealth)*2.0);
+  }
+
+  gl_FragColor=vec4(color,1.0);
+}
+`;
+
+function compileShader(src,type){
+  const s=gl.createShader(type);
+  gl.shaderSource(s,src);
+  gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){
+    console.error('Shader error:',gl.getShaderInfoLog(s));
+    gl.deleteShader(s); return null;
+  }
+  return s;
+}
+
+const vs=compileShader(vsSource,gl.VERTEX_SHADER);
+const fs=compileShader(fsSource,gl.FRAGMENT_SHADER);
+const program=gl.createProgram();
+gl.attachShader(program,vs);
+gl.attachShader(program,fs);
+gl.linkProgram(program);
+if(!gl.getProgramParameter(program,gl.LINK_STATUS))
+  console.error('Link error:',gl.getProgramInfoLog(program));
+gl.useProgram(program);
+
+const buf=gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+const aPos=gl.getAttribLocation(program,'aPosition');
+gl.enableVertexAttribArray(aPos);
+gl.vertexAttribPointer(aPos,2,gl.FLOAT,false,0,0);
+
+const uTime=gl.getUniformLocation(program,'iTime');
+const uRes=gl.getUniformLocation(program,'iResolution');
+const uPlayerPos=gl.getUniformLocation(program,'uPlayerPos');
+const uPlayerRoll=gl.getUniformLocation(program,'uPlayerRoll');
+const uPlayerYaw=gl.getUniformLocation(program,'uPlayerYaw');
+const uPlayerPitch=gl.getUniformLocation(program,'uPlayerPitch');
+const uFlash=gl.getUniformLocation(program,'uFlash');
+const uSpeed=gl.getUniformLocation(program,'uSpeed');
+const uHealth=gl.getUniformLocation(program,'uHealth');
+const uCh0=gl.getUniformLocation(program,'iChannel0');
+const uCh1=gl.getUniformLocation(program,'iChannel1');
+
+// ============================================================
+// AUDIO
+// ============================================================
+let audioCtx=null, engineOsc=null, engineGain=null, masterGain=null;
+
+function mainSound(time){
+  time=((time-5.0)%12.0+12.0)%12.0;
+  const phase=6.2831*440.0*time;
+  const raw=((Math.sin(phase)*100.0)%1.0+1.0)%1.0;
+  return raw*Math.exp(-time)*Math.min(1.0,time);
+}
+
+function initAudio(){
+  if(audioCtx)return;
+  audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  masterGain=audioCtx.createGain();
+  masterGain.gain.value=0.25;
+  masterGain.connect(audioCtx.destination);
+
+  // Engine
+  engineOsc=audioCtx.createOscillator();
+  engineOsc.type='sawtooth';
+  engineOsc.frequency.value=80;
+  engineGain=audioCtx.createGain();
+  engineGain.gain.value=0.08;
+  const filt=audioCtx.createBiquadFilter();
+  filt.type='lowpass'; filt.frequency.value=300;
+  engineOsc.connect(filt);
+  filt.connect(engineGain);
+  engineGain.connect(masterGain);
+  engineOsc.start();
+
+  // Music
+  const sz=4096;
+  const proc=audioCtx.createScriptProcessor(sz,0,2);
+  let sc=0;
+  const sr=audioCtx.sampleRate;
+  proc.onaudioprocess=function(e){
+    const L=e.outputBuffer.getChannelData(0);
+    const R=e.outputBuffer.getChannelData(1);
+    for(let i=0;i<sz;i++){
+      const v=mainSound(sc/sr)*0.25;
+      L[i]=v; R[i]=v; sc++;
+    }
+  };
+  proc.connect(masterGain);
+}
+
+function playHitSound(){
+  if(!audioCtx)return;
+  const o=audioCtx.createOscillator();
+  const g=audioCtx.createGain();
+  o.type='square'; o.frequency.value=200;
+  o.frequency.exponentialRampToValueAtTime(50,audioCtx.currentTime+0.3);
+  g.gain.value=0.3;
+  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.3);
+  o.connect(g); g.connect(masterGain);
+  o.start(); o.stop(audioCtx.currentTime+0.3);
+}
+
+// ============================================================
+// JS-SIDE DISTANCE FUNCTION (collision detection)
+// ============================================================
+function jsDE(px,py,pz){
+  const tt=game.time*0.5;
+  let y2=py+Math.sin(pz-tt*6.0)*0.15;
+
+  // Fractal
+  let tx=px,ty=y2,tz=Math.abs(3.0-((pz%6.0)+6.0)%6.0);
+  let pw=1.0;
+  for(let i=0;i<4;i++){
+    tx=Math.abs(tx+1)-Math.abs(tx-1)-tx;
+    tz=Math.abs(tz+1)-Math.abs(tz-1)-tz;
+    ty-=0.25;
+    const a=35*Math.PI/180, ca=Math.cos(a), sa=Math.sin(a);
+    const nx=tx*ca+ty*sa, ny=-tx*sa+ty*ca;
+    tx=nx; ty=ny;
+    const dd=Math.max(0.2,Math.min(1.0,tx*tx+ty*ty+tz*tz));
+    const sc=2.0/dd;
+    tx*=sc; ty*=sc; tz*=sc; pw*=sc;
+  }
+  const fr=(Math.sqrt(Math.max(0,ty-1.5)**2+Math.max(0,tz-1.5)**2)-1.0)/pw;
+
+  // Tunnel
+  let ro=Math.max(Math.abs(px+1)-0.3,py-0.35);
+  ro=Math.max(ro,-Math.max(Math.abs(px+1)-0.1,py-0.5));
+  const mz=Math.abs(0.25-((pz%0.5)+0.5)%0.5);
+  ro=Math.max(ro,-Math.max(Math.abs(mz)-0.2,py-0.3));
+  ro=Math.max(ro,-Math.max(Math.abs(mz)-0.01,-py+0.32));
+
+  let d=Math.min(fr,ro);
+
+  // Crystals
+  const rep=4.0;
+  const oz=((pz+rep*0.5)%rep+rep)%rep-rep*0.5;
+  const ox=((px+1.5)%3.0+3.0)%3.0-1.5;
+  const ang=pz*0.5+tt*2.0;
+  const ca2=Math.cos(ang),sa2=Math.sin(ang);
+  const rcx=ox*ca2+(py-0.15)*sa2;
+  const rcy=-ox*sa2+(py-0.15)*ca2;
+  let crystal=Math.max(Math.abs(rcx),Math.abs(rcy))-0.06;
+  crystal=Math.max(crystal,Math.abs(oz)-0.3);
+  d=Math.min(d,crystal);
+
+  // Rings
+  const rz2=((pz+2.0)%8.0+8.0)%8.0-4.0;
+  const ringR=Math.sqrt((px+1)**2+(py-0.2)**2)-0.25;
+  const ring=Math.max(Math.abs(ringR)-0.015,Math.abs(rz2)-0.015);
+  d=Math.min(d,ring);
+
+  // Asteroids - octahedrons on a 3D grid
+  {
+    const acx=2.5, acy=1.8, acz=4.0;
+    const aidx=Math.floor((px+acx*0.5)/acx);
+    const aidy=Math.floor((py+acy*0.5)/acy);
+    const aidz=Math.floor((pz+acz*0.5)/acz);
+    const alx=((px+acx*0.5)%acx+acx)%acx-acx*0.5;
+    const aly=((py+acy*0.5)%acy+acy)%acy-acy*0.5;
+    const alz=((pz+acz*0.5)%acz+acz)%acz-acz*0.5;
+
+    const h1=((Math.sin(aidx*127.1+aidy*311.7+aidz*74.7)*43758.5)%1+1)%1;
+    const h2=((Math.sin(aidx*269.5+aidy*183.3+aidz*421.1)*28461.1)%1+1)%1;
+    const h3=((Math.sin(aidx*419.2+aidy*371.9+aidz*622.3)*61537.9)%1+1)%1;
+
+    if(h1>0.45){
+      let apx=alx-(h1-0.5)*acx*0.5;
+      let apy=aly-(h2-0.5)*acy*0.5;
+      let apz=alz-(h3-0.5)*acz*0.5;
+
+      const ta1=tt*(1.0+h1*2.0)+h2*6.28;
+      const ta2=tt*(0.7+h2*1.5)+h3*6.28;
+      // rot xy
+      let c1=Math.cos(ta1),s1=Math.sin(ta1);
+      let nx=apx*c1+apy*s1, ny=-apx*s1+apy*c1;
+      apx=nx; apy=ny;
+      // rot yz
+      let c2=Math.cos(ta2),s2=Math.sin(ta2);
+      let ny2=apy*c2+apz*s2, nz2=-apy*s2+apz*c2;
+      apy=ny2; apz=nz2;
+
+      const asize=0.08+h1*0.12;
+      const ast=(Math.abs(apx)+Math.abs(apy)+Math.abs(apz)-asize)*0.577;
+      d=Math.min(d,ast);
+    }
+  }
+
+  return d;
+}
+
+// ============================================================
+// GAME LOGIC
+// ============================================================
+function updateGame(dt){
+  if(!game.started||game.over)return;
+  game.dt=Math.min(dt,0.05);
+  game.time+=game.dt;
+
+  // Speed
+  let ts=1.0;
+  if(keys['ShiftLeft']||keys['ShiftRight'])ts=2.0;
+  if(keys['Space'])ts=0.4;
+  game.speed+=(ts-game.speed)*4.0*game.dt;
+
+  // Steer
+  let sx=0,sy=0;
+  if(keys['KeyA']||keys['ArrowLeft'])sx-=1;
+  if(keys['KeyD']||keys['ArrowRight'])sx+=1;
+  if(keys['KeyW']||keys['ArrowUp'])sy+=1;
+  if(keys['KeyS']||keys['ArrowDown'])sy-=1;
+  sx+=mouseDX*15.0;
+  sy-=mouseDY*15.0;
+  mouseDX*=0.4; mouseDY*=0.4;
+
+  const sf=6.0;
+  game.vx+=sx*sf*game.dt;
+  game.vy+=sy*sf*game.dt;
+  game.vx*=Math.pow(0.08,game.dt);
+  game.vy*=Math.pow(0.08,game.dt);
+  const mv=4.0;
+  game.vx=Math.max(-mv,Math.min(mv,game.vx));
+  game.vy=Math.max(-mv,Math.min(mv,game.vy));
+
+  game.px+=game.vx*game.dt;
+  game.py+=game.vy*game.dt;
+  game.pz-=game.baseSpeed*game.speed*game.dt;
+
+  // Camera feel
+  game.roll+=(-game.vx*0.8-game.roll)*5.0*game.dt;
+  game.yaw+=(game.vx*0.15-game.yaw)*3.0*game.dt;
+  game.pitch+=(-game.vy*0.1-game.pitch)*3.0*game.dt;
+
+  // Collision
+  game.hitCooldown=Math.max(0,game.hitCooldown-game.dt);
+  const dist=jsDE(game.px,game.py,game.pz);
+  if(dist<0.04 && game.hitCooldown<=0){
+    game.health-=15;
+    game.flash=1.0;
+    game.hitCooldown=0.5;
+    playHitSound();
+    game.vx*=-0.5; game.vy*=-0.5;
+    game.px+=game.vx*0.1; game.py+=game.vy*0.1;
+    if(game.health<=0){
+      game.health=0;
+      game.over=true;
+      showMessage('HULL BREACH\n\nScore: '+game.score+'\n\n[ Click to restart ]');
+    }
+  }
+
+  game.flash*=Math.pow(0.001,game.dt);
+  if(game.flash<0.01)game.flash=0;
+
+  game.score=Math.floor(-game.pz*10);
+
+  if(engineOsc){
+    engineOsc.frequency.value=60+game.speed*80;
+    engineGain.gain.value=0.04+game.speed*0.06;
+  }
+
+  document.getElementById('score-display').textContent=game.score;
+  document.getElementById('speed-display').textContent='SPD '+game.speed.toFixed(1)+'x';
+  document.getElementById('health-bar').style.width=game.health+'%';
+}
+
+function showMessage(t){
+  const el=document.getElementById('message');
+  el.textContent=t; el.classList.add('show');
+}
+function hideMessage(){document.getElementById('message').classList.remove('show');}
+
+function restartGame(){
+  Object.assign(game,{
+    over:false, score:0, health:100, speed:1.0,
+    px:-1.0, py:0.5, pz:0.0, vx:0, vy:0,
+    roll:0, yaw:0, pitch:0, flash:0, hitCooldown:0, time:0
+  });
+  hideMessage();
+  canvas.requestPointerLock();
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+let lastTime=performance.now();
+
+function render(now){
+  const dt=(now-lastTime)/1000.0;
+  lastTime=now;
+  updateGame(dt);
+
+  gl.uniform1f(uTime,game.time);
+  gl.uniform2f(uRes,canvas.width,canvas.height);
+  gl.uniform3f(uPlayerPos,game.px,game.py,game.pz);
+  gl.uniform1f(uPlayerRoll,game.roll);
+  gl.uniform1f(uPlayerYaw,game.yaw);
+  gl.uniform1f(uPlayerPitch,game.pitch);
+  gl.uniform1f(uFlash,game.flash);
+  gl.uniform1f(uSpeed,game.speed);
+  gl.uniform1f(uHealth,game.health/100.0);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D,audioTex);
+  gl.uniform1i(uCh0,0);
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D,nyanTex);
+  gl.uniform1i(uCh1,1);
+  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+  requestAnimationFrame(render);
+}
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

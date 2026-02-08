@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Ocean Voyage</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            font-family: sans-serif;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        #start-screen {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 20, 40, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            z-index: 10;
+            transition: opacity 0.5s;
+        }
+
+        #start-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #game-over {
+            position: absolute;
+            inset: 0;
+            background: rgba(50, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            z-index: 20;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+
+        #game-over.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        h1 {
+            color: #4ecdc4;
+            font-size: 40px;
+            text-shadow: 0 0 20px #4ecdc4;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #ff5555;
+            font-size: 50px;
+            text-shadow: 0 0 20px #ff0000;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 15px 50px;
+            font-size: 24px;
+            background: #fff;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            font-weight: bold;
+            color: #002;
+            transition: transform 0.2s;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        #hud {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            opacity: 0;
+            transition: opacity 1s;
+        }
+
+        #hud.visible {
+            opacity: 1;
+        }
+
+        .stat {
+            color: #fff;
+            font-size: 24px;
+            text-shadow: 2px 2px 2px #000;
+            font-weight: bold;
+        }
+
+        #score {
+            color: #ffd700;
+        }
+
+        #time {
+            color: #ff5555;
+        }
+
+        /* Navigation Arrow */
+        #arrow-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            overflow: visible;
+            display: none;
+        }
+
+        #arrow {
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-bottom: 30px solid #ffd700;
+            position: absolute;
+            top: -100px;
+            left: -15px;
+            filter: drop-shadow(0 0 10px #ffaa00);
+        }
+
+        #controls {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #controls.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .pad {
+            display: flex;
+            gap: 10px;
+        }
+
+        .col {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 24px;
+            pointer-events: auto;
+            touch-action: manipulation;
+        }
+
+        .btn:active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="glCanvas"></canvas>
+    <div id="ui">
+        <div id="hud">
+            <div class="stat" id="speed">0 kn</div>
+            <div class="stat" id="time">60s</div>
+            <div class="stat" id="score">SCORE: 0</div>
+        </div>
+        <div id="arrow-container">
+            <div id="arrow"></div>
+        </div>
+        <div id="controls">
+            <div class="pad">
+                <div class="btn" id="left">◀</div>
+                <div class="btn" id="right">▶</div>
+            </div>
+            <div class="pad col">
+                <div class="btn" id="up">▲</div>
+                <div class="btn" id="down">▼</div>
+            </div>
+        </div>
+    </div>
+    <div id="start-screen">
+        <h1>OCEAN VOYAGE<br>TREASURE HUNT</h1>
+        <button id="start">SET SAIL</button>
+        <p style="color:#aaa; margin-top: 20px">Arrows/WASD to Steer<br>Collect Orbs to Extend Time!</p>
+    </div>
+    <div id="game-over">
+        <h2>TIME'S UP!</h2>
+        <div class="stat" id="final-score" style="margin-bottom:30px">SCORE: 0</div>
+        <button id="restart">PLAY AGAIN</button>
+    </div>
+
+    <script>
+        // --- GLSL SHADER SOURCE ---
+        const vsSource = "attribute vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }";
+        const fsSource = `precision highp float;
+uniform vec2 u_res;
+uniform float u_time;
+uniform vec3 u_shipPos;
+uniform float u_shipAngle;
+uniform vec3 u_balls[3];
+
+const int NUM_STEPS = 8;
+const float PI = 3.141592;
+const float EPSILON = 0.001;
+const int ITER_GEOMETRY = 3;
+const int ITER_FRAGMENT = 5;
+const float SEA_HEIGHT = 0.6;
+const float SEA_CHOPPY = 4.0;
+const float SEA_SPEED = 0.8;
+const float SEA_FREQ = 0.16;
+const vec3 SEA_BASE = vec3(0.0,0.09,0.18);
+const vec3 SEA_WATER_COLOR = vec3(0.8,0.9,0.6)*0.6;
+const mat2 octave_m = mat2(1.6,1.2,-1.2,1.6);
+const vec3 LDIR = normalize(vec3(-1.0, -1.0, -1.0));
+
+mat3 rotY(float a) {
+    float c = cos(a); float s = sin(a);
+    return mat3(c, 0.0, -s, 0.0, 1.0, 0.0, s, 0.0, c);
+}
+
+float hsh12(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * .1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+// 3D Noise for Flag logic
+vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
+float snoise(vec2 v){
+    const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+    vec2 i  = floor(v + dot(v, C.yy)); vec2 x0 = v - i + dot(i, C.xx);
+    vec2 i1; i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+    vec4 x12 = x0.xyxy + C.xxzz; x12.xy -= i1; i = mod(i, 289.0);
+    vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
+    vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+    m = m*m; m = m*m;
+    vec3 x = 2.0 * fract(p * C.www) - 1.0; vec3 h = abs(x) - 0.5; vec3 ox = floor(x + 0.5); vec3 a0 = x - ox;
+    m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
+    vec3 g; g.x = a0.x * x0.x + h.x * x0.y; g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+    return 130.0 * dot(m, g);
+}
+float water_y(vec2 uv) { return snoise(.5*uv+vec2(u_time*.25,0.))*1.3; }
+
+float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f*f*(3.0-2.0*f);
+    return -1.0+2.0*mix(mix(hsh12(i+vec2(0.0,0.0)), hsh12(i+vec2(1.0,0.0)), u.x),
+                        mix(hsh12(i+vec2(0.0,1.0)), hsh12(i+vec2(1.0,1.0)), u.x), u.y);
+}
+
+float sea_octave(vec2 uv, float choppy) {
+    uv += noise(uv);
+    vec2 wv = 1.0-abs(sin(uv));
+    vec2 swv = abs(cos(uv));
+    wv = mix(wv,swv,wv);
+    return pow(1.0-pow(wv.x * wv.y,0.65),choppy);
+}
+
+float map(vec3 p) {
+    float freq = SEA_FREQ;
+    float amp = SEA_HEIGHT;
+    float choppy = SEA_CHOPPY;
+    vec2 uv = p.xz; uv.x *= 0.75;
+    float d, h = 0.0;
+    float sea_time = 1.0 + u_time * SEA_SPEED;
+    for(int i = 0; i < ITER_GEOMETRY; i++) {
+        d = sea_octave((uv+sea_time)*freq,choppy);
+        d += sea_octave((uv-sea_time)*freq,choppy);
+        h += d * amp;
+        uv *= octave_m; freq *= 1.9; amp *= 0.22;
+        choppy = mix(choppy,1.0,0.2);
+    }
+    return p.y - h;
+}
+
+float map_detailed(vec3 p) {
+    float freq = SEA_FREQ;
+    float amp = SEA_HEIGHT;
+    float choppy = SEA_CHOPPY;
+    vec2 uv = p.xz; uv.x *= 0.75;
+    float d, h = 0.0;
+    float sea_time = 1.0 + u_time * SEA_SPEED;
+    for(int i = 0; i < ITER_FRAGMENT; i++) {
+        d = sea_octave((uv+sea_time)*freq,choppy);
+        d += sea_octave((uv-sea_time)*freq,choppy);
+        h += d * amp;
+        uv *= octave_m; freq *= 1.9; amp *= 0.22;
+        choppy = mix(choppy,1.0,0.2);
+    }
+    return p.y - h;
+}
+
+vec3 getSeaColor(vec3 p, vec3 n, vec3 l, vec3 eye, vec3 dist) {  
+    float fresnel = clamp(1.0 - dot(n, -eye), 0.0, 1.0);
+    fresnel = min(fresnel * fresnel * fresnel, 0.5);
+    vec3 reflected = vec3(0.0,0.0,0.0);
+    vec3 refracted = SEA_BASE + pow(dot(n,l)*0.4+0.6, 80.0) * SEA_WATER_COLOR * 0.12; 
+    vec3 color = mix(refracted, reflected, fresnel);
+    float atten = max(1.0 - dot(dist, dist) * 0.001, 0.0);
+    color += SEA_WATER_COLOR * (p.y - SEA_HEIGHT) * 0.18 * atten;
+    return color;
+}
+
+vec3 getNormal(vec3 p, float eps) {
+    vec3 n;
+    n.y = map_detailed(p);
+    n.x = map_detailed(vec3(p.x+eps,p.y,p.z)) - n.y;
+    n.z = map_detailed(vec3(p.x,p.y,p.z+eps)) - n.y;
+    n.y = eps;
+    return normalize(n);
+}
+
+float heightMapTracing(vec3 ori, vec3 dir, out vec3 p) {  
+    float tm = 0.0;
+    float tx = 1000.0;
+    float hx = map(ori + dir * tx);
+    if(hx > 0.0) { p = ori + dir * tx; return tx; }
+    float hm = map(ori);
+    for(int i = 0; i < NUM_STEPS; i++) {
+        float tmid = mix(tm, tx, hm / (hm - hx));
+        p = ori + dir * tmid;
+        float hmid = map(p);
+        if(hmid < 0.0) { tx = tmid; hx = hmid; }
+        else { tm = tmid; hm = hmid; }
+        if(abs(hmid) < EPSILON) break;
+    }
+    return mix(tm, tx, hm / (hm - hx));
+}
+
+// --- SHIP SDF ---
+float hexprism(vec3 p, vec2 h) {
+    const vec3 k = vec3(-0.8660254, 0.5, 0.57735);
+    p = abs(p);
+    p.xy -= 2.0*min(dot(k.xy, p.xy), 0.0)*k.xy;
+    vec2 d = vec2(length(p.xy-vec2(clamp(p.x,-k.z*h.x,k.z*h.x), h.x))*sign(p.y-h.x), p.z-h.y);
+    return min(max(d.x,d.y),0.0) + length(max(d,0.0));
+}
+
+mat3 rotate_boat_logic(vec3 p) {
+    float t = u_time * 0.5;
+    float tx = sin(t)*0.05;
+    float ty = cos(t)*0.05;
+    mat3 rx = mat3(1,0,0, 0,cos(tx),-sin(tx), 0,sin(tx),cos(tx));
+    mat3 ry = mat3(cos(ty),-sin(ty),0, sin(ty),cos(ty),0, 0,0,1);
+    return rx * ry;
+}
+
+float boat_mast(vec3 p, out float mat) {
+    float hm = 100.0;
+    // Main mast (Vertical)
+    vec3 mp = p - vec3(0.0, 0.6, -0.1); 
+    float mast = length(mp.xz) - 0.04;
+    mast = max(mast, abs(mp.y) - 1.0); 
+    
+    // Crossbeam
+    vec3 bp = p - vec3(0.0, 0.5, 0.4); 
+    float boom = length(bp.xy) - 0.03; 
+    boom = max(boom, abs(bp.z) - 0.6); 
+    
+    // Sail (Fore-and-Aft)
+    vec3 sp = p - vec3(0.0, 0.8, 0.4);
+    // sp.x += sin(sp.z*2.0 + u_time)*0.1; // Flap
+    float sail = length(max(abs(sp) - vec3(0.02, 0.6, 0.5), 0.0)); // Thin X, Wide Z
+    
+    hm = min(mast, boom);
+    if(sail < hm) { mat = 2.0; hm = sail; } 
+    else mat = 4.0; 
+    
+    return hm;
+}
+
+float boat(vec3 p, out float m) {
+    vec3 hp = p;
+    hp.y -= 0.1;
+    float b = hexprism(hp, vec2(0.25, 0.15));
+    vec3 dp = p - vec3(0.0, 0.25, -0.2);
+    float cabin = length(max(abs(dp) - vec3(0.15, 0.1, 0.15), 0.0));
+    b = min(b, cabin);
+    
+    float mm;
+    float mast = boat_mast(p, mm);
+    
+    if(b < mast) m = 1.0; 
+    else { m = mm; }
+    
+    return min(b, mast);
+}
+
+float sdf_scene(vec3 p, out float m, float shipH) {
+    // Ship
+    vec3 q = p - (u_shipPos + vec3(0.0, shipH + 0.1, 0.0));
+    q = rotY(-u_shipAngle + 3.14159) * q; // ROTATE 180 TO FACE FORWARD
+    
+    q = rotate_boat_logic(q) * q;
+    q = q.xzy; q.z*=1.7; q.x*=.5; q.z -= 1.35*q.x*q.x; 
+    
+    float d = boat(q, m);
+    
+    // Balls
+    for(int i=0; i<3; i++) {
+        float wave = sin(u_balls[i].z*0.5 + u_time) * 0.3;
+        vec3 bPos = u_balls[i] + vec3(0.0, wave + 0.2, 0.0);
+        
+        float ball = length(p - bPos) - 0.4;
+        
+        if(ball < d) { d = ball; m = 3.0; }
+    }
+    return d;
+}
+
+float march(vec3 ro, vec3 rd, float t_max, out float m, float shipH) {
+    float t = 0.0;
+    for(int i=0; i<50; i++) {
+        float d = sdf_scene(ro + rd*t, m, shipH);
+        if(d < 0.01) return t;
+        t += d;
+        if(t > t_max) return t_max + 1.0;
+    }
+    return t_max + 1.0;
+}
+
+vec2 triplanar_uv(vec3 p) { return (p.xz + p.xy + p.yz)/3.0; }
+
+float voronoi(vec2 uv) {
+    vec2 p = floor(uv);
+    vec2 f = fract(uv);
+    float y = 1.0;
+    for (int i = -1; i <= 1; i++) for (int j = -1; j <= 1; j++) {
+        vec2 c = vec2(float(i), float(j));
+        vec2 p_c = p + c;
+        float h = hsh12(p_c);
+        vec2 delta = c - f + vec2(h, h); 
+        float dist = dot(delta,delta);
+        y = min(dist, y); 
+    }
+    return sqrt(y);
+}
+
+void main() {
+    vec2 uv = (gl_FragCoord.xy / u_res.xy) * 2.0 - 1.0;
+    uv.x *= u_res.x / u_res.y;
+
+    float shipH = -map(u_shipPos);
+    vec3 shipVisual = u_shipPos + vec3(0.0, shipH, 0.0);
+    
+    // Camera - Behind Step (Rotated with ship)
+    float camDist = 6.0;
+    float camH = 3.0;
+    // Ship faces North (Angle 0).
+    // Camera should be South (behind).
+    // u_shipAngle=0 -> Offset (0, 3, 6).
+    // sin(0)=0, cos(0)=1. Correct.
+    vec3 camOff = vec3(sin(u_shipAngle)*camDist, camH, cos(u_shipAngle)*camDist);
+    vec3 ro = shipVisual + camOff;
+    vec3 ta = shipVisual + vec3(0.0, 1.0, 0.0); 
+    
+    vec3 fwd = normalize(ta - ro);
+    vec3 rgt = normalize(cross(vec3(0,1,0), fwd));
+    vec3 up = cross(fwd, rgt);
+    vec3 rd = normalize(fwd + rgt*uv.x + up*uv.y);
+    
+    vec3 p_sea;
+    float t_sea = heightMapTracing(ro, rd, p_sea);
+    
+    float m_scene;
+    float t_scene = march(ro, rd, t_sea, m_scene, shipH);
+    
+    vec3 col;
+    bool hitScene = (t_scene < t_sea);
+    
+    if(hitScene) {
+        vec3 p = ro + rd * t_scene;
+        vec2 e = vec2(0.01, 0.0);
+        float m_ign;
+        vec3 n_scene = normalize(vec3(
+            sdf_scene(p+e.xyy, m_ign, shipH) - sdf_scene(p-e.xyy, m_ign, shipH),
+            sdf_scene(p+e.yxy, m_ign, shipH) - sdf_scene(p-e.yxy, m_ign, shipH),
+            sdf_scene(p+e.yyx, m_ign, shipH) - sdf_scene(p-e.yyx, m_ign, shipH)
+        ));
+        
+        if(m_scene == 3.0) { 
+             col = vec3(1.0, 0.8, 0.1);
+             col += pow(max(0.0, dot(reflect(rd, n_scene), LDIR)), 10.0);
+        } else if (m_scene == 2.0) { 
+             col = vec3(0.95, 0.95, 0.9);
+             col *= dot(n_scene, -LDIR)*0.5+0.5;
+        } else { 
+             col = vec3(0.4, 0.25, 0.15); 
+             vec3 q = p - shipVisual;
+             q = rotY(-u_shipAngle) * q;
+             float v = voronoi(triplanar_uv(q)*4.0);
+             col *= v*0.5+0.5;
+             col *= dot(n_scene, vec3(0,1,0))*0.6+0.4;
+        }
+    } else {
+        if(t_sea < 1000.0) {
+            vec3 n = getNormal(p_sea, 0.1);
+            vec3 ld = normalize(vec3(0.0, 1.0, 0.5));
+            col = getSeaColor(p_sea, n, ld, rd, p_sea - ro);
+            
+            float fog = 1.0 - exp(-0.002 * t_sea * t_sea);
+            vec3 sky = vec3(0.6, 0.7, 0.8);
+            col = mix(col, sky, fog);
+        } else {
+            col = vec3(0.6, 0.7, 0.8);
+        }
+    }
+    
+    float t_limit = hitScene ? t_scene : t_sea;
+    
+    for(int i=0; i<3; i++) {
+        vec3 bCenter = u_balls[i];
+        float t_close = dot(bCenter.xz - ro.xz, rd.xz) / dot(rd.xz, rd.xz);
+        
+        if(t_close > 0.0 && t_close < t_limit) { // DEPTH TEST
+            vec3 p_close = ro + rd * t_close;
+            float dist = length(p_close.xz - bCenter.xz);
+             
+            if(dist < 0.5) { 
+                float glow = (0.5 - dist) * 2.0; 
+                col += vec3(1.0, 0.8, 0.2) * glow * 0.3;
+            }
+        }
+    }
+    
+    gl_FragColor = vec4(pow(col, vec3(0.4545)), 1.0);
+}`;
+
+        // --- JS LOGIC ---
+        const canvas = document.getElementById('glCanvas');
+        const gl = canvas.getContext('webgl');
+        const program = gl.createProgram();
+
+        const createShader = (type, src) => {
+            const s = gl.createShader(type);
+            gl.shaderSource(s, src);
+            gl.compileShader(s);
+            if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+                console.error('Shader Error:', gl.getShaderInfoLog(s));
+                alert('Shader Error: ' + gl.getShaderInfoLog(s));
+                return null;
+            }
+            return s;
+        };
+
+        gl.attachShader(program, createShader(gl.VERTEX_SHADER, vsSource));
+        gl.attachShader(program, createShader(gl.FRAGMENT_SHADER, fsSource));
+        gl.linkProgram(program);
+        gl.useProgram(program);
+
+        const buf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
+        const pLoc = gl.getAttribLocation(program, 'p');
+        gl.enableVertexAttribArray(pLoc);
+        gl.vertexAttribPointer(pLoc, 2, gl.FLOAT, false, 0, 0);
+
+        const locs = {
+            res: gl.getUniformLocation(program, 'u_res'),
+            time: gl.getUniformLocation(program, 'u_time'),
+            shipPos: gl.getUniformLocation(program, 'u_shipPos'),
+            shipAngle: gl.getUniformLocation(program, 'u_shipAngle'),
+            balls: gl.getUniformLocation(program, 'u_balls')
+        };
+
+        // Game State
+        const game = { active: false, score: 0, time: 0, timeLeft: 60 };
+        const ship = { x: 0, z: 0, angle: 0, speed: 0 };
+        const inputs = { l: false, r: false, u: false, d: false };
+        const balls = [];
+
+        // Spawn Helpers
+        function spawnBall(isStart) {
+            let angle, dist;
+            if (isStart) {
+                angle = Math.PI + (Math.random() - 0.5) * 1.5; // Front arc (South/Negative Z)
+                dist = 20 + Math.random() * 30;
+            } else {
+                // Spawn ahead of ship (Ship moves -Z, Angle 0)
+                angle = ship.angle + Math.PI + (Math.random() - 0.5) * 1.0;
+                dist = 60 + Math.random() * 20;
+            }
+            return {
+                x: ship.x + Math.sin(angle) * dist,
+                z: ship.z + Math.cos(angle) * dist
+            };
+        }
+
+        for (let i = 0; i < 3; i++) balls.push(spawnBall(true));
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+        }
+        window.onresize = resize;
+        resize();
+
+        // Input
+        const key = (k, v) => {
+            if (k == 'ArrowLeft' || k == 'a') inputs.l = v;
+            if (k == 'ArrowRight' || k == 'd') inputs.r = v;
+            if (k == 'ArrowUp' || k == 'w') inputs.u = v;
+            if (k == 'ArrowDown' || k == 's') inputs.d = v;
+        };
+        document.onkeydown = e => key(e.key, true);
+        document.onkeyup = e => key(e.key, false);
+
+        const touch = (id, k) => {
+            const el = document.getElementById(id);
+            el.ontouchstart = e => { e.preventDefault(); inputs[k] = true; };
+            el.ontouchend = e => { e.preventDefault(); inputs[k] = false; };
+        };
+        if ('ontouchstart' in window) {
+            document.getElementById('controls').classList.add('visible');
+            touch('left', 'l'); touch('right', 'r'); touch('up', 'u'); touch('down', 'd');
+        }
+
+        // TILT CONTROLS
+        const statusEl = document.createElement('div');
+        statusEl.style.color = '#aaa';
+        statusEl.style.marginTop = '10px';
+        statusEl.innerText = 'Tilt Status: Checking...';
+        document.getElementById('start-screen').appendChild(statusEl);
+
+        function handleOrientation(e) {
+            // Gamma: Left/Right (-90 to 90)
+            // Beta: Front/Back (-180 to 180)
+            const g = e.gamma;
+            const b = e.beta;
+
+            if (g !== null && b !== null) {
+                statusEl.innerText = `Tilt Active: G=${Math.round(g)} B=${Math.round(b)}`;
+            }
+
+            // Steering (Deadzone +/- 10)
+            inputs.l = (g < -10);
+            inputs.r = (g > 10);
+
+            // Speed
+            inputs.u = (b < 30);
+            inputs.d = (b > 60);
+        }
+
+        // Non-iOS devices might fire immediately
+        if (window.DeviceOrientationEvent) {
+            window.addEventListener('deviceorientation', handleOrientation);
+        } else {
+            statusEl.innerText = 'Device Orientation Not Supported';
+        }
+
+        document.getElementById('start').onclick = () => {
+            // file:// Protocol Warning
+            if (location.protocol === 'file:') {
+                const msg = "Motion sensors (Tilt) are blocked on 'file://' URLs by iOS Safari.\n\nPlease run a local web server (e.g., 'python3 -m http.server') and access via 'http://<computer-ip>:8000'.";
+                statusEl.innerText = "Error: Blocked on file://";
+                alert(msg);
+            }
+
+            // Request Mobile Permission (iOS 13+)
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                statusEl.innerText = 'Requesting Permission...';
+                DeviceOrientationEvent.requestPermission()
+                    .then(response => {
+                        if (response === 'granted') {
+                            statusEl.innerText = 'Permission Granted!';
+                            window.addEventListener('deviceorientation', handleOrientation);
+                            startGame();
+                        } else {
+                            alert('Permission Denied: ' + response);
+                            statusEl.innerText = 'Permission Denied: ' + response;
+                            startGame(); // Start anyway with touch controls
+                        }
+                    })
+                    .catch(err => {
+                        alert('Error: ' + err);
+                        statusEl.innerText = 'Error: ' + err;
+                        startGame();
+                    });
+            } else {
+                // Non-iOS 13+ devices
+                if (!window.DeviceOrientationEvent) {
+                    // alert('Device Orientation Not Supported on this browser.');
+                }
+                startGame();
+            }
+        };
+
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('hud').classList.add('visible');
+            document.getElementById('arrow-container').style.display = 'block';
+            game.active = true;
+        }
+
+        document.getElementById('restart').onclick = () => {
+            location.reload();
+        };
+
+        let lastT = 0;
+        function loop(t) {
+            requestAnimationFrame(loop);
+            const dt = Math.min((t - lastT) * 0.001, 0.05);
+            lastT = t;
+
+            if (game.active) {
+                game.time += dt;
+                game.timeLeft -= dt;
+
+                // Timer Check
+                if (game.timeLeft <= 0) {
+                    game.active = false;
+                    document.getElementById('hud').style.opacity = 0;
+                    document.getElementById('arrow-container').style.display = 'none';
+                    document.getElementById('game-over').classList.add('visible');
+                    document.getElementById('final-score').innerText = 'SCORE: ' + game.score;
+                    return;
+                }
+                document.getElementById('time').innerText = Math.ceil(game.timeLeft) + 's';
+
+                // Physics
+                if (inputs.l) ship.angle += 1.5 * dt;
+                if (inputs.r) ship.angle -= 1.5 * dt;
+
+                // Accelerate (Up = Speed Up)
+                if (inputs.u) ship.speed = Math.min(20, ship.speed + 8 * dt);
+                else if (inputs.d) ship.speed = Math.max(-5, ship.speed - 8 * dt);
+                else ship.speed *= 0.98; // Friction
+
+                // Move Forward (-Z direction)
+                ship.x -= Math.sin(ship.angle) * ship.speed * dt;
+                ship.z -= Math.cos(ship.angle) * ship.speed * dt;
+
+                // Collisions
+                let nearestDist = 9999;
+                let nearestBall = null;
+
+                balls.forEach(b => {
+                    const dx = b.x - ship.x;
+                    const dz = b.z - ship.z;
+                    const dist = Math.sqrt(dx * dx + dz * dz);
+
+                    if (dist < nearestDist) { nearestDist = dist; nearestBall = b; }
+
+                    if (dist < 3.0) {
+                        game.score += 100;
+                        game.timeLeft += 10; // Bonus Time
+                        document.getElementById('score').innerText = 'SCORE: ' + game.score;
+                        // Respawn Ahead
+                        const nb = spawnBall(false);
+                        b.x = nb.x; b.z = nb.z;
+                    }
+                });
+
+                document.getElementById('speed').innerText = Math.round(Math.abs(ship.speed)) + ' kn';
+
+                // Arrow Logic
+                if (nearestBall) {
+                    const dx = nearestBall.x - ship.x;
+                    const dz = nearestBall.z - ship.z;
+                    // ship.angle is 0 for North (-Z).
+                    // atan2(dx, dz) gives angle from Z.
+                    // We want relative to ship.
+                    // targetAng = atan2(dx, dz).
+                    // But forward is -Z.
+                    // atan2(dx, dz) of (0,-1) is PI.
+                    // ship.angle = 0.
+                    // rel = PI.
+                    // CSS Rotate(PI) -> Arrow points Down.
+                    // Ball is Ahead (negative Z). Arrow should point Up.
+                    // So valid rel = targetAng - ship.angle + PI.
+                    // Let's try.
+                    let targetAng = Math.atan2(dx, dz);
+                    let relAng = targetAng - ship.angle + Math.PI;
+                    document.getElementById('arrow').style.transform = `rotate(${relAng}rad)`;
+                }
+            }
+
+            // Render
+            gl.uniform2f(locs.res, canvas.width, canvas.height);
+            gl.uniform1f(locs.time, game.time);
+            gl.uniform3f(locs.shipPos, -ship.x, 0, ship.z);
+            gl.uniform1f(locs.shipAngle, -ship.angle);
+
+            const bFlat = [];
+            balls.forEach(b => bFlat.push(-b.x, 0, b.z));
+            gl.uniform3fv(locs.balls, bFlat);
+
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+        }
+        requestAnimationFrame(loop);
+
+        console.log("Seascape Initialized");
+    </script>
+</body>
+
+</html>

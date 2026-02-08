@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+    <title>NEON FLIGHT</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: monospace;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            cursor: crosshair;
+        }
+
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            text-shadow: 2px 2px 0 #000;
+            color: #fff;
+            z-index: 10;
+        }
+
+        button {
+            pointer-events: auto;
+            font-size: 24px;
+            padding: 10px 20px;
+            background: #fff;
+            border: 4px solid #000;
+            cursor: pointer;
+            font-family: inherit;
+            text-transform: uppercase;
+            box-shadow: 4px 4px 0 #000;
+        }
+
+        button:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 #000;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 20px;
+            z-index: 5;
+            color: white;
+            text-shadow: 1px 1px 2px black;
+            font-weight: bold;
+        }
+
+        #msg {
+            margin-top: 10px;
+            font-size: 16px;
+            color: #ffeb3b;
+        }
+
+        #cache {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+            color: #00ff00;
+            z-index: 5;
+            text-shadow: 1px 1px 2px black;
+            opacity: 0;
+            transition: opacity 0.5s;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <div class="hud hidden" id="hud">SCORE: <span id="score">0</span></div>
+    <div id="cache">+100 CACHE</div>
+    <div id="ui">
+        <div id="start">
+            <h1 style="font-size: 40px; margin-bottom: 10px;">NEON FLIGHT</h1>
+            <p>Controls Redone</p>
+            <p>W/Up = Fly UP</p>
+            <p>A/Left = Turn LEFT</p>
+            <button id="btn">LAUNCH</button>
+        </div>
+        <div id="over" class="hidden">
+            <h1>SIGNAL LOST</h1>
+            <p>Final Score: <span id="final">0</span></p>
+            <div id="msg"></div>
+            <br>
+            <button onclick="location.reload()">RETRY</button>
+        </div>
+    </div>
+
+    <script>
+        const C = document.getElementById('c');
+        const GL = C.getContext('webgl');
+
+        let W, H;
+        function resize() {
+            W = C.width = window.innerWidth;
+            H = C.height = window.innerHeight;
+            GL.viewport(0, 0, W, H);
+        }
+        window.onresize = resize;
+        resize();
+
+        // --- SHADER ---
+        const VS = `attribute vec2 p; void main(){ gl_Position=vec4(p,0.,1.); }`;
+
+        const FS = `
+            precision highp float;
+            uniform vec2 uR; 
+            uniform float uT; 
+            uniform vec3 uP;   // Plane Pos
+            uniform vec3 uPR;  // Plane Rot
+            uniform vec3 uCam; // Camera Pos
+            uniform vec3 uLook;// Cam LookAt
+            uniform vec3 uC[6];// Cache Positions
+
+            float hash(vec2 p) {
+                p = fract(p * vec2(123.34, 456.21));
+                p += dot(p, p + 45.32);
+                return fract(p.x * p.y);
+            }
+            float noise(vec2 p) {
+                vec2 i = floor(p);
+                vec2 f = fract(p);
+                f = f * f * (3.0 - 2.0 * f);
+                float a = hash(i);
+                float b = hash(i + vec2(1.0, 0.0));
+                float c = hash(i + vec2(0.0, 1.0));
+                float d = hash(i + vec2(1.0, 1.0));
+                return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+            }
+            float fbm(vec2 p) {
+                float v = 0.0, a = 0.5;
+                for(int i=0; i<5; i++){ v += a * noise(p); p *= 2.0; a *= 0.5; }
+                return v;
+            }
+            
+            float smin(float a, float b, float k) {
+                float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+                return mix(b, a, h) - k * h * (1.0 - h);
+            }
+            mat2 rot(float a) { float c=cos(a), s=sin(a); return mat2(c,-s,s,c); }
+            float sdBox(vec3 p, vec3 b) {
+                vec3 q = abs(p) - b;
+                return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
+            }
+
+            float getH(vec2 p) {
+                float h = fbm(p * 0.1);
+                h = pow(h, 1.5); 
+                return h * 25.0; 
+            }
+            
+            float sdPlane(vec3 p) {
+                vec3 q = p - uP;
+                q.xz *= rot(-uPR.z); // Yaw
+                q.yz *= rot(-uPR.y); // Pitch
+                q.xy *= rot(-uPR.x * 2.0); // Bank EXAGGERATED for visual feedback
+                
+                // Fuselage
+                float d = length(q - vec3(0,0, clamp(q.z, -1.0, 1.0))) - 0.5;
+                d = max(d, -q.y + q.z*0.2 + 0.1); 
+                vec3 qw = q; qw.x = abs(qw.x);
+                vec3 wPos = qw - vec3(1.0, 0.0, 0.2);
+                wPos.xz *= rot(-0.3);
+                vec3 b = vec3(1.8, 0.08, 0.6);
+                float dw = sdBox(wPos, b);
+                d = smin(d, dw, 0.3);
+                vec3 qt = q - vec3(0.0, 0.6, -1.4);
+                qt.yz *= rot(-0.5);
+                float dt = sdBox(qt, vec3(0.06, 0.7, 0.5));
+                d = smin(d, dt, 0.1);
+                return d;
+            }
+            
+            float sdCache(vec3 p) {
+                float d = 1000.0;
+                for(int i=0; i<6; i++) {
+                    if (uC[i].y < -500.0) continue;
+                    vec3 cp = p - uC[i];
+                    float t = uT * 2.0 + float(i);
+                    cp.xy *= rot(t);
+                    cp.xz *= rot(t*0.7);
+                    d = min(d, sdBox(cp, vec3(1.5)));
+                }
+                return d;
+            }
+
+            float map(vec3 p) {
+                return min(min(p.y - getH(p.xz), sdPlane(p)), sdCache(p));
+            }
+            
+            vec3 getNorm(vec3 p) {
+                vec2 e = vec2(0.01, 0.0);
+                float d=map(p);
+                return normalize(vec3(map(p+e.xyy)-d, map(p+e.yxy)-d, map(p+e.yyx)-d));
+            }
+
+            void main() {
+                vec2 uv = (gl_FragCoord.xy - 0.5*uR) / uR.y;
+                vec3 ro = uCam, look = uLook;
+                vec3 f = normalize(look - ro);
+                vec3 r = normalize(cross(vec3(0,1,0), f));
+                // Horizon Locked (0.0) -> Plane Banks VISIBLY on screen
+                r.xy *= rot(0.0); 
+                vec3 u = cross(f, r);
+                vec3 rd = normalize(f + uv.x*r + uv.y*u);
+                float t=0.0;
+                int hit=0; 
+                for(int i=0; i<80; i++) {
+                    vec3 p = ro + rd * t;
+                    float h = map(p);
+                    if(abs(h)<0.02) {
+                        float dp = sdPlane(p);
+                        float dc = sdCache(p);
+                        if(dp < h+0.1) hit=2;
+                        else if(dc < h+0.1) hit=3;
+                        else hit=1;
+                        break;
+                    }
+                    if(t>250.0) break;
+                    t += h * 0.5; 
+                }
+                vec3 col = vec3(0.5, 0.7, 0.9) - rd.y*0.4; 
+                float sun = max(0.0, dot(rd, normalize(vec3(-0.5, 0.4, 1.0))));
+                col += vec3(1.0, 0.8, 0.6) * pow(sun, 16.0);
+                if (hit>0) {
+                    vec3 p = ro + rd * t;
+                    vec3 n = getNorm(p);
+                    vec3 ld = normalize(vec3(-0.5, 0.8, 0.3));
+                    float diff = max(0.1, dot(n, ld));
+                    float spec = pow(max(0.0, dot(reflect(rd, n), ld)), 16.0);
+                    if(hit==1) {
+                         vec3 g = vec3(0.1, 0.3, 0.1);
+                         col = mix(g, vec3(0.9), smoothstep(0.2, 0.5, 1.0-n.y));
+                         col *= diff;
+                         col = mix(col, vec3(0.6, 0.8, 0.9), 1.0 - exp(-t * 0.008));
+                    } else if(hit==2) {
+                         col = vec3(0.8, 0.9, 1.0)*diff + spec;
+                         col += vec3(0.2, 0.5, 1.0) * pow(1.0 - max(0.0, dot(-rd, n)), 3.0);
+                    } else if(hit==3) {
+                         col = vec3(0.0, 1.0, 0.2) * 1.5 + vec3(1.0) * spec;
+                         col += vec3(0.5, 1.0, 0.5) * (1.0 - max(0.0, dot(-rd, n))) * 2.0;
+                    }
+                }
+                gl_FragColor = vec4(col, 1.0);
+            }
+        `;
+
+        function cn(t, s) {
+            const o = GL.createShader(t);
+            GL.shaderSource(o, s); GL.compileShader(o);
+            if (!GL.getShaderParameter(o, GL.COMPILE_STATUS)) console.error(GL.getShaderInfoLog(o));
+            return o;
+        }
+        const P = GL.createProgram();
+        GL.attachShader(P, cn(GL.VERTEX_SHADER, VS));
+        GL.attachShader(P, cn(GL.FRAGMENT_SHADER, FS));
+        GL.linkProgram(P);
+        GL.useProgram(P);
+
+        const b = GL.createBuffer();
+        GL.bindBuffer(GL.ARRAY_BUFFER, b);
+        GL.bufferData(GL.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), GL.STATIC_DRAW);
+        const locP = GL.getAttribLocation(P, 'p');
+        GL.enableVertexAttribArray(locP);
+        GL.vertexAttribPointer(locP, 2, GL.FLOAT, false, 0, 0);
+
+        const uL = {
+            R: GL.getUniformLocation(P, 'uR'),
+            T: GL.getUniformLocation(P, 'uT'),
+            P: GL.getUniformLocation(P, 'uP'),
+            PR: GL.getUniformLocation(P, 'uPR'),
+            Cam: GL.getUniformLocation(P, 'uCam'),
+            Look: GL.getUniformLocation(P, 'uLook'),
+            uC: GL.getUniformLocation(P, 'uC')
+        };
+
+        // --- JS ENGINE ---
+        function fract(x) { return x - Math.floor(x); }
+        function hash(x, y) {
+            let px = fract(x * 123.34), py = fract(y * 456.21);
+            let d = px * (px + 45.32) + py * (py + 45.32);
+            px += d; py += d;
+            return fract(px * py);
+        }
+        function mix(a, b, t) { return a * (1 - t) + b * t; }
+        function noise(x, y) {
+            let ix = Math.floor(x), iy = Math.floor(y);
+            let fx = fract(x), fy = fract(y);
+            let ux = fx * fx * (3.0 - 2.0 * fx), uy = fy * fy * (3.0 - 2.0 * fy);
+            return mix(mix(hash(ix, iy), hash(ix + 1, iy), ux), mix(hash(ix, iy + 1), hash(ix + 1, iy + 1), ux), uy);
+        }
+        function fbm(x, z) {
+            let v = 0.0, a = 0.5;
+            for (let i = 0; i < 5; i++) { v += a * noise(x, z); x *= 2.0; z *= 2.0; a *= 0.5; }
+            return v;
+        }
+        function getTerrainHeight(x, z) {
+            return Math.pow(fbm(x * 0.1, z * 0.1), 1.5) * 25.0;
+        }
+        function getCacheCenter(ix, iz) {
+            let px = fract(ix * 123.34), py = fract(iz * 456.21);
+            let d = px * (px + 45.32) + py * (py + 45.32);
+            px += d; py += d;
+            let h = fract(px * py);
+            let offX = (fract(h * 12.3) - 0.5) * 80.0;
+            let offZ = (fract(h * 56.7) - 0.5) * 80.0;
+            let y = 30.0 + fract(h * 90.1) * 30.0;
+            return { x: ix * 100.0 + offX, y: y, z: iz * 100.0 + offZ };
+        }
+
+        const keys = { w: 0, a: 0, s: 0, d: 0, ArrowUp: 0, ArrowDown: 0, ArrowLeft: 0, ArrowRight: 0 };
+        document.onkeydown = e => keys[e.key] = 1;
+        document.onkeyup = e => keys[e.key] = 0;
+
+        let mX = 0, mY = 0, mDown = false;
+        document.onmousedown = e => { mDown = true; mX = e.clientX; mY = e.clientY; };
+        document.onmouseup = e => mDown = false;
+        document.onmousemove = e => { if (mDown) { mX = e.clientX; mY = e.clientY; } };
+        document.ontouchstart = e => { mDown = true; mX = e.touches[0].clientX; mY = e.touches[0].clientY; };
+        document.ontouchend = e => mDown = false;
+        document.ontouchmove = e => { if (mDown) { mX = e.touches[0].clientX; mY = e.touches[0].clientY; } };
+
+        let running = false, t = 0, score = 0;
+        let p = { x: 0, y: 50, z: 0 };
+        let speed = 20.0;
+        let rot = { x: 0, y: 0, z: 0 };
+        let collected = {};
+        let activeCaches = new Float32Array(6 * 3);
+
+        const btn = document.getElementById('btn');
+        const startFn = (e) => {
+            if (e && e.type === 'touchstart') e.preventDefault();
+            document.getElementById('start').classList.add('hidden');
+            document.getElementById('hud').classList.remove('hidden');
+            document.getElementById('over').classList.add('hidden');
+            running = true; score = 0; t = 0;
+            p = { x: 0, y: 50, z: 0 }; speed = 30.0; rot = { x: 0, y: 0, z: 0 };
+            collected = {};
+            loop();
+        };
+        btn.onclick = startFn;
+        btn.ontouchstart = startFn;
+
+        function loop() {
+            if (!running) return;
+            requestAnimationFrame(loop);
+            let dt = 0.016;
+            t += dt;
+            speed += dt * 0.5;
+
+            // --- NEW CLEAN CONTROLS ---
+            let tr = 0, tp = 0;
+
+            // 1. ROLL (Left/Right)
+            // Left Input = BANK LEFT (-ve)
+            if (keys.ArrowLeft || keys.a) tr = -1.0;
+            if (keys.ArrowRight || keys.d) tr = 1.0;
+
+            // 2. PITCH (Up/Down)
+            // Up Input = NOSE UP (+ve) -> CASUAL MODE
+            if (keys.ArrowUp || keys.w) tp = 1.0;
+            if (keys.ArrowDown || keys.s) tp = -1.0;
+
+            // 3. MOUSE Overrides
+            if (mDown) {
+                // Left of Center -> Left Bank (-ve)
+                tr = (mX - W / 2) / (W / 4);
+                // Top of Center (Small Y) -> Nose Up (+ve)
+                // Map 0 -> +ve, H -> -ve
+                tp = -(mY - H / 2) / (H / 4);
+            }
+            tr = Math.max(-1.5, Math.min(1.5, tr));
+            tp = Math.max(-1.0, Math.min(1.0, tp));
+
+            // Responsiveness
+            rot.x += (tr - rot.x) * 6.0 * dt;
+            rot.y += (tp - rot.y) * 6.0 * dt;
+
+            // Physics: Bank Left (-ve) -> Turn Left (-ve Yaw) -> Add
+            rot.z += rot.x * 0.8 * dt;
+
+            p.x += speed * Math.sin(rot.z) * dt;
+            p.z += speed * Math.cos(rot.z) * dt;
+            p.y += rot.y * 30.0 * dt;
+            if (p.y > 150) p.y = 150;
+
+            // Camera (Lag)
+            if (typeof camRot === 'undefined') { window.camRot = { z: rot.z, y: rot.y }; }
+            let diff = rot.z - camRot.z;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            camRot.z += diff * 0.2;
+            camRot.y += (rot.y - camRot.y) * 0.2;
+
+            let dist = 14.0, height = 6.0;
+            // Pos
+            let cx = p.x - Math.sin(camRot.z) * dist;
+            let cz = p.z - Math.cos(camRot.z) * dist;
+            let cy = p.y + height + camRot.y * 5.0;
+            // Look
+            let tx = p.x + Math.sin(rot.z) * 10.0;
+            let tz = p.z + Math.cos(rot.z) * 10.0;
+            let ty = p.y;
+
+            // Logic
+            let h = getTerrainHeight(p.x, p.z);
+            if (p.y < h + 1.0) { running = false; document.getElementById('over').classList.remove('hidden'); document.getElementById('final').innerText = score; }
+
+            let sp = 100.0, ix = Math.floor((p.x + sp * 0.5) / sp), iz = Math.floor((p.z + sp * 0.5) / sp);
+            let candidates = [];
+            for (let dx = -2; dx <= 2; dx++) {
+                for (let dz = -2; dz <= 2; dz++) {
+                    let cx = ix + dx, cz = iz + dz, k = cx + "," + cz;
+                    if (!collected[k]) {
+                        let c = getCacheCenter(cx, cz);
+                        let d2 = (p.x - c.x) ** 2 + (p.y - c.y) ** 2 + (p.z - c.z) ** 2;
+                        candidates.push({ c, d2, k });
+                    }
+                }
+            }
+            candidates.sort((a, b) => a.d2 - b.d2);
+            for (let i = 0; i < 6; i++) {
+                if (i < candidates.length) {
+                    activeCaches[i * 3] = candidates[i].c.x;
+                    activeCaches[i * 3 + 1] = candidates[i].c.y;
+                    activeCaches[i * 3 + 2] = candidates[i].c.z;
+                    if (candidates[i].d2 < 25.0) {
+                        collected[candidates[i].k] = true; score += 100;
+                        activeCaches[i * 3 + 1] = -1000.0;
+                        let el = document.getElementById('cache'); el.style.opacity = 1; setTimeout(() => el.style.opacity = 0, 800);
+                        document.getElementById('score').innerText = score;
+                    }
+                } else activeCaches[i * 3 + 1] = -1000.0;
+            }
+
+            GL.uniform2f(uL.R, W, H);
+            GL.uniform1f(uL.T, t);
+            GL.uniform3f(uL.P, p.x, p.y, p.z);
+            GL.uniform3f(uL.PR, rot.x, rot.y, rot.z);
+            GL.uniform3f(uL.Cam, cx, cy, cz);
+            GL.uniform3f(uL.Look, tx, ty, tz);
+            GL.uniform3fv(uL.uC, activeCaches);
+            GL.drawArrays(GL.TRIANGLE_STRIP, 0, 4);
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+    <title>Neon Flyer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            overflow: hidden
+        }
+
+        body {
+            background: #0a0015;
+            touch-action: none
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh
+        }
+
+        #ui {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            color: #fff;
+            font: bold 14px monospace;
+            background: rgba(0, 0, 0, .5);
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #f0f
+        }
+
+        #score {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            color: #0ff;
+            font: bold 22px monospace;
+            text-shadow: 0 0 15px #0ff
+        }
+
+        #start {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font: bold 28px monospace;
+            text-align: center;
+            text-shadow: 0 0 25px #f0f;
+            background: rgba(0, 0, 0, .6);
+            padding: 30px;
+            border-radius: 10px;
+            border: 2px solid #f0f
+        }
+
+        #go {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #f0f;
+            font: bold 40px monospace;
+            text-align: center;
+            text-shadow: 0 0 30px #f0f;
+            display: none;
+            background: rgba(0, 0, 0, .7);
+            padding: 30px;
+            border-radius: 10px
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <div id="ui">Distance: <span id="dist">0</span>m<br>Speed: <span id="spd">100</span>%</div>
+    <div id="score">0m</div>
+    <div id="start">⟡ NEON FLYER ⟡<br><small style="font-size:14px">Tilt to steer • Dodge pillars</small><br><small
+            style="font-size:12px;color:#0ff">TAP TO START</small></div>
+    <div id="go">GAME OVER<br><span id="fs" style="color:#0ff"></span><br><small style="font-size:16px">Tap to
+            retry</small></div>
+    <script>
+        const C = document.getElementById('c'), G = C.getContext('webgl', { antialias: true, alpha: false });
+        let W = C.width = innerWidth, H = C.height = innerHeight;
+        addEventListener('resize', () => { W = C.width = innerWidth; H = C.height = innerHeight; G.viewport(0, 0, W, H) });
+
+
+
+        // Polygon shader for environment
+        const VS = `attribute vec3 p;attribute vec3 n;uniform mat4 m,v,j;varying vec3 vN,vP;void main(){vec4 wp=m*vec4(p,1.);vP=wp.xyz;vN=mat3(m)*n;gl_Position=j*v*wp;}`,
+            FS = `precision mediump float;uniform vec3 c,lp;varying vec3 vN,vP;void main(){vec3 N=normalize(vN);vec3 L=normalize(lp-vP);float d=max(dot(N,L),.2);vec3 col=c*(.3+.7*d);gl_FragColor=vec4(col,1.);}`;
+
+        // Raymarching shader for ship
+        const SHIP_VS = `attribute vec2 p;varying vec2 uv;void main(){uv=p*.5+.5;gl_Position=vec4(p,0.,1.);}`;
+        const SHIP_FS = `precision highp float;
+varying vec2 uv;
+uniform float iTime;
+uniform vec2 iResolution;
+uniform vec3 shipPos;
+uniform float shipRoll,shipPitch;
+uniform mat4 viewMat;
+
+float saturate(float x){return clamp(x,0.,1.);}
+float sdBox3(vec3 p,vec3 b){vec3 d=abs(p)-b;return length(max(d,0.))+min(max(d.x,max(d.y,d.z)),0.);}
+float sdCapsule3(vec3 p,vec3 a,vec3 b,float r){vec3 pa=p-a,ba=b-a;float h=clamp(dot(pa,ba)/dot(ba,ba),0.,1.);return length(pa-ba*h)-r;}
+float opSmoothUnion(float d1,float d2,float k){float h=saturate(.5+.5*(d2-d1)/k);return mix(d2,d1,h)-k*h*(1.-h);}
+
+mat3 rotX(float a){float c=cos(a),s=sin(a);return mat3(1,0,0,0,c,-s,0,s,c);}
+mat3 rotY(float a){float c=cos(a),s=sin(a);return mat3(c,0,s,0,1,0,-s,0,c);}
+mat3 rotZ(float a){float c=cos(a),s=sin(a);return mat3(c,-s,0,s,c,0,0,0,1);}
+
+float mapShip(vec3 p){
+    vec3 q=p;
+    q.x=abs(q.x);
+    float fus=sdCapsule3(q,vec3(0,0,-.2),vec3(0,0,.35),.08);
+    float nose=sdBox3(q-vec3(0,0,.42),vec3(.04,.04,.08));
+    nose=opSmoothUnion(nose,sdCapsule3(q,vec3(0,0,.32),vec3(0,0,.52),.05),.06);
+    vec3 w=q-vec3(.1,-.02,0);w.z+=w.x*.9;
+    float wing=sdBox3(w,vec3(.22,.01,.12));
+    float fin=sdBox3(q-vec3(0,.1,-.18),vec3(.01,.1,.08));
+    float canopy=sdCapsule3(q,vec3(0,.06,.05),vec3(0,.06,.18),.045);
+    vec3 pc=vec3(.34,-.02,-.2);
+    float pod=sdCapsule3(p-pc,vec3(0,0,-.08),vec3(0,0,.1),.035);
+    pod=min(pod,sdCapsule3(p+vec3(pc.x,0,0)-vec3(0,pc.y,pc.z),vec3(0,0,-.08),vec3(0,0,.1),.035));
+    float hull=opSmoothUnion(fus,nose,.1);
+    hull=opSmoothUnion(hull,wing,.1);
+    hull=opSmoothUnion(hull,fin,.08);
+    hull=opSmoothUnion(hull,canopy,.06);
+    hull=opSmoothUnion(hull,pod,.08);
+    return hull;
+}
+
+vec3 calcNormal(vec3 p){
+    vec2 e=vec2(.002,0);
+    return normalize(vec3(mapShip(p+e.xyy)-mapShip(p-e.xyy),mapShip(p+e.yxy)-mapShip(p-e.yxy),mapShip(p+e.yyx)-mapShip(p-e.yyx)));
+}
+
+float raymarch(vec3 ro,vec3 rd){
+    float t=0.;
+    for(int i=0;i<32;i++){
+        vec3 p=ro+rd*t;
+        float d=mapShip(p);
+        if(d<.005)return t;
+        if(t>20.)break;
+        t+=d*.8;
+    }
+    return -1.;
+}
+
+vec3 shadeShip(vec3 p,vec3 rd){
+    vec3 n=calcNormal(p);
+    vec3 lightDir=normalize(vec3(.4,.7,.2));
+    float ndl=saturate(dot(n,lightDir));
+    float ndv=saturate(dot(n,-rd));
+    float fres=pow(1.-ndv,4.);
+    vec3 hullCol=vec3(.45,.5,.55);
+    vec3 shadowCol=vec3(.18,.2,.24);
+    vec3 accentCol=vec3(.2,.85,1.);
+    vec3 diff=mix(shadowCol,hullCol,ndl);
+    diff*=.25+1.2*ndl;
+    vec3 h=normalize(lightDir-rd);
+    float spec=pow(saturate(dot(n,h)),64.);
+    vec3 rim=accentCol*fres*.8;
+    return diff+spec*vec3(.9,.95,1.)*.8+rim;
+}
+
+void main(){
+    vec2 fragCoord=uv*iResolution;
+    vec2 p=(fragCoord-.5*iResolution)/iResolution.y;
+    
+    // Camera setup
+    vec3 camPos=shipPos+vec3(0,3.0,-8.);
+    vec3 target=shipPos;
+    vec3 fwd=normalize(target-camPos);
+    vec3 right=normalize(cross(vec3(0,1,0),fwd));
+    vec3 up=cross(fwd,right);
+    // Camera tilts opposite to ship roll
+    float camRoll=-shipRoll*.5;
+    float cr=cos(camRoll),sr=sin(camRoll);
+    vec3 right2=right*cr+up*sr;
+    vec3 up2=up*cr-right*sr;
+    vec3 rd=normalize(p.x*right2+p.y*up2+1.6*fwd);
+    
+    // Transform ray into ship local space
+    mat3 shipRot=rotZ(shipRoll)*rotX(shipPitch);
+    vec3 ro_local=shipRot*(camPos-shipPos);
+    vec3 rd_local=shipRot*rd;
+    
+    float t=raymarch(ro_local,rd_local);
+    
+    if(t>0.){
+        vec3 hitP=ro_local+rd_local*t;
+        vec3 col=shadeShip(hitP,rd_local);
+        
+        // Thruster glow
+        vec3 eng1=vec3(.34,-.02,-.25);
+        vec3 eng2=vec3(-.34,-.02,-.25);
+        float d1=length(hitP-eng1);
+        float d2=length(hitP-eng2);
+        float glow=exp(-d1*8.)+exp(-d2*8.);
+        vec3 flameCol=mix(vec3(1.,.3,.1),vec3(.2,.6,1.),saturate(glow));
+        col+=flameCol*glow*.5;
+        
+        gl_FragColor=vec4(col,1.);
+    }else{
+        discard;
+    }
+}`;
+
+        function S(t, s) { const x = G.createShader(t); G.shaderSource(x, s); G.compileShader(x); if (!G.getShaderParameter(x, G.COMPILE_STATUS)) console.log(G.getShaderInfoLog(x)); return x }
+
+        // Environment program
+        const pg = G.createProgram(); G.attachShader(pg, S(G.VERTEX_SHADER, VS)); G.attachShader(pg, S(G.FRAGMENT_SHADER, FS)); G.linkProgram(pg);
+        const pL = G.getAttribLocation(pg, 'p'), nL = G.getAttribLocation(pg, 'n'), mL = G.getUniformLocation(pg, 'm'), vL = G.getUniformLocation(pg, 'v'), jL = G.getUniformLocation(pg, 'j'), cL = G.getUniformLocation(pg, 'c'), lpL = G.getUniformLocation(pg, 'lp');
+
+        // Ship raymarching program
+        const shipPg = G.createProgram(); G.attachShader(shipPg, S(G.VERTEX_SHADER, SHIP_VS)); G.attachShader(shipPg, S(G.FRAGMENT_SHADER, SHIP_FS)); G.linkProgram(shipPg);
+        const shipTimeL = G.getUniformLocation(shipPg, 'iTime'), shipResL = G.getUniformLocation(shipPg, 'iResolution'), shipPosL = G.getUniformLocation(shipPg, 'shipPos'), shipRollL = G.getUniformLocation(shipPg, 'shipRoll'), shipPitchL = G.getUniformLocation(shipPg, 'shipPitch');
+
+        // Fullscreen quad for ship
+        const quadB = G.createBuffer(); G.bindBuffer(G.ARRAY_BUFFER, quadB); G.bufferData(G.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), G.STATIC_DRAW);
+
+        function B(v, n) { const b = G.createBuffer(); G.bindBuffer(G.ARRAY_BUFFER, b); const d = []; for (let i = 0; i < v.length; i += 3)d.push(v[i], v[i + 1], v[i + 2], n[i], n[i + 1], n[i + 2]); G.bufferData(G.ARRAY_BUFFER, new Float32Array(d), G.STATIC_DRAW); return b }
+        function I(d) { const b = G.createBuffer(); G.bindBuffer(G.ELEMENT_ARRAY_BUFFER, b); G.bufferData(G.ELEMENT_ARRAY_BUFFER, new Uint16Array(d), G.STATIC_DRAW); return b }
+
+        // Pillar box
+        const bV = [-1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1, 1, -1, -1, -1, 1, -1, -1, 1, 1, -1, -1, 1, -1],
+            bN = [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, -1, 0, 0, -1, 0, 0, 1, 0, 0, 1, 0, 0, 0, -1, 0, 0, -1, 0, 0, 1, 0, 0, 1, 0],
+            bI = [0, 1, 2, 0, 2, 3, 4, 6, 5, 4, 7, 6, 0, 4, 5, 0, 5, 1, 2, 6, 7, 2, 7, 3, 0, 3, 7, 0, 7, 4, 1, 5, 6, 1, 6, 2], boxB = B(bV, bN), boxIB = I(bI);
+
+
+
+        // Matrix functions
+        function M() { return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] }
+        function Tr(m, x, y, z) { m[12] += m[0] * x + m[4] * y + m[8] * z; m[13] += m[1] * x + m[5] * y + m[9] * z; m[14] += m[2] * x + m[6] * y + m[10] * z }
+        function Sc(m, x, y, z) { m[0] *= x; m[1] *= x; m[2] *= x; m[4] *= y; m[5] *= y; m[6] *= y; m[8] *= z; m[9] *= z; m[10] *= z }
+        function Rx(m, a) { const c = Math.cos(a), s = Math.sin(a), t = m[4], u = m[5], v = m[6], w = m[8], x = m[9], y = m[10]; m[4] = t * c + w * s; m[5] = u * c + x * s; m[6] = v * c + y * s; m[8] = w * c - t * s; m[9] = x * c - u * s; m[10] = y * c - v * s }
+        function Rz(m, a) { const c = Math.cos(a), s = Math.sin(a), t = m[0], u = m[1], v = m[2], w = m[4], x = m[5], y = m[6]; m[0] = t * c + w * s; m[1] = u * c + x * s; m[2] = v * c + y * s; m[4] = w * c - t * s; m[5] = x * c - u * s; m[6] = y * c - v * s }
+        function Persp(f, a, n, r) { const t = Math.tan(f / 2); return [1 / (a * t), 0, 0, 0, 0, 1 / t, 0, 0, 0, 0, -(r + n) / (r - n), -1, 0, 0, -2 * r * n / (r - n), 0] }
+
+        // Game state
+        const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        let px = 0, py = 3, pz = 0, vx = 0, vy = 0, speed = isMobile ? .72 : .18, roll = 0, pitch = 0, score = 0, best = 0, started = false, alive = true;
+        let pillars = [], gx = 0, gy = 0, touching = false, touchX = 0, touchY = 0;
+
+        function genPillars() { pillars = []; for (let z = 60; z < 3000; z += 15 + Math.random() * 20) { const gap = 4 + Math.random() * 5; const cx = -20 + Math.random() * 40; pillars.push({ x: cx - gap - 2, z, w: 1.5 + Math.random(), h: 8 + Math.random() * 25 }); pillars.push({ x: cx, z, w: 1.5 + Math.random(), h: 8 + Math.random() * 25 }); pillars.push({ x: cx + gap + 2, z, w: 1.5 + Math.random(), h: 8 + Math.random() * 25 }) } }
+        genPillars();
+
+        // Device orientation
+        let orientationEnabled = false;
+        function enableOrientation() {
+            if (orientationEnabled) return;
+            orientationEnabled = true;
+            console.log('Orientation enabled!');
+            addEventListener('deviceorientation', e => {
+                gx = e.gamma || 0;
+                gy = e.beta || 0;
+            });
+        }
+        function requestOrientation() {
+            if (orientationEnabled) return;
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(response => {
+                        console.log('Permission response:', response);
+                        if (response === 'granted') enableOrientation();
+                    })
+                    .catch(err => console.log('Permission error:', err));
+            } else if (window.DeviceOrientationEvent) {
+                enableOrientation();
+            }
+        }
+        // Request on first interaction
+        document.addEventListener('click', requestOrientation);
+        document.addEventListener('touchend', requestOrientation);
+
+        // Touch controls
+        C.addEventListener('touchstart', e => { touching = true; touchX = e.touches[0].clientX; touchY = e.touches[0].clientY });
+        C.addEventListener('touchmove', e => { if (touching) { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY } });
+        C.addEventListener('touchend', () => touching = false);
+
+        // Keyboard
+        let keys = {};
+        addEventListener('keydown', e => keys[e.key] = true);
+        addEventListener('keyup', e => keys[e.key] = false);
+
+        function start() { if (!started) { started = true; document.getElementById('start').style.display = 'none' } else if (!alive) { alive = true; px = 0; py = 3; pz = 0; vx = 0; vy = 0; score = 0; speed = isMobile ? .72 : .18; genPillars(); document.getElementById('go').style.display = 'none' } }
+        document.addEventListener('click', start);
+        document.addEventListener('touchstart', start);
+
+        function collision() { for (let o of pillars) { const dz = pz - o.z; if (dz > -1.5 && dz < o.w + 1) { const dx = Math.abs(px - o.x); if (dx < o.w + .6 && py < o.h + .8) return true } } return py < .5 }
+
+        function update() {
+            if (!started || !alive) return;
+            let ix = 0, iy = 0;
+            if (Math.abs(gx) > .5 || Math.abs(gy) > .5) { ix = gx / 30; iy = (gy - 30) / 40 }
+            else if (touching) { ix = -(touchX - W / 2) / (W / 3); iy = (touchY - H / 2) / (H / 3) } // Inverted X for correct direction
+            if (keys.ArrowLeft || keys.a) ix = 1;
+            if (keys.ArrowRight || keys.d) ix = -1;
+            if (keys.ArrowUp || keys.w) iy = -1;
+            if (keys.ArrowDown || keys.s) iy = 1;
+            ix = Math.max(-1, Math.min(1, ix)); iy = Math.max(-1, Math.min(1, iy));
+            vx += ix * .012; vy -= iy * .008;
+            vx *= .96; vy *= .96;
+            px += vx; py += vy;
+            py = Math.max(.8, Math.min(12.5, py));
+            px = Math.max(-25, Math.min(25, px));
+            pz += speed;
+            speed = Math.min(isMobile ? 2.4 : .6, speed + .0003);
+            roll = vx * 3; // Inverted for correct visual tilt
+            pitch = vy * 1.5;
+            score = Math.floor(pz);
+            if (collision()) { alive = false; if (score > best) best = score; document.getElementById('go').style.display = 'block'; document.getElementById('fs').textContent = score + 'm (Best: ' + best + 'm)' }
+            document.getElementById('dist').textContent = score;
+            document.getElementById('spd').textContent = Math.floor(speed * 555);
+            document.getElementById('score').textContent = score + 'm';
+        }
+
+        function draw() {
+            G.viewport(0, 0, W, H);
+            G.clearColor(.04, 0, .1, 1); G.clear(G.COLOR_BUFFER_BIT | G.DEPTH_BUFFER_BIT);
+            G.enable(G.DEPTH_TEST); G.enable(G.CULL_FACE);
+
+            // Draw environment with polygon shader
+            G.useProgram(pg);
+            const asp = W / H, proj = Persp(1.1, asp, .1, 600), view = M();
+            view[0] = -1; view[10] = -1;
+            Tr(view, -px, -py - 1.5, -pz + 8);
+            G.uniformMatrix4fv(jL, false, proj); G.uniformMatrix4fv(vL, false, view);
+            G.uniform3f(lpL, px, py + 10, pz + 20);
+
+            const stride = 24;
+
+            // Draw pillars
+            G.bindBuffer(G.ARRAY_BUFFER, boxB); G.bindBuffer(G.ELEMENT_ARRAY_BUFFER, boxIB);
+            G.enableVertexAttribArray(pL); G.vertexAttribPointer(pL, 3, G.FLOAT, false, stride, 0);
+            G.enableVertexAttribArray(nL); G.vertexAttribPointer(nL, 3, G.FLOAT, false, stride, 12);
+
+            for (let o of pillars) {
+                if (o.z < pz - 20 || o.z > pz + 250) continue;
+                let m = M(); Tr(m, o.x, o.h / 2, o.z); Sc(m, o.w, o.h / 2, o.w);
+                G.uniformMatrix4fv(mL, false, m);
+                const d = Math.max(0, 1 - (o.z - pz) / 200);
+                G.uniform3f(cL, .85 * d, .15 * d, .5 * d);
+                G.drawElements(G.TRIANGLES, bI.length, G.UNSIGNED_SHORT, 0);
+            }
+
+            // Ground grid
+            for (let gz = -3; gz < 25; gz++) {
+                for (let gx = -12; gx < 12; gx++) {
+                    let m = M(); Tr(m, gx * 4, 0, Math.floor(pz / 5) * 5 + gz * 5); Sc(m, 1.8, .03, 1.8);
+                    G.uniformMatrix4fv(mL, false, m);
+                    const fade = Math.max(0, 1 - Math.abs(gz - 10) / 15);
+                    G.uniform3f(cL, .9 * fade, .1 * fade, .7 * fade);
+                    G.drawElements(G.TRIANGLES, bI.length, G.UNSIGNED_SHORT, 0);
+                }
+            }
+
+            // Draw raymarched ship
+            G.useProgram(shipPg);
+            G.disable(G.DEPTH_TEST);
+            G.disable(G.CULL_FACE);
+            G.uniform1f(shipTimeL, performance.now() / 1000);
+            G.uniform2f(shipResL, W, H);
+            G.uniform3f(shipPosL, px, py, pz);
+            G.uniform1f(shipRollL, roll);
+            G.uniform1f(shipPitchL, pitch + .15);
+            G.bindBuffer(G.ARRAY_BUFFER, quadB);
+            const quadPL = G.getAttribLocation(shipPg, 'p');
+            G.enableVertexAttribArray(quadPL);
+            G.vertexAttribPointer(quadPL, 2, G.FLOAT, false, 0, 0);
+            G.drawArrays(G.TRIANGLE_STRIP, 0, 4);
+        }
+
+        function loop() { update(); draw(); requestAnimationFrame(loop) }
+        loop();
+    </script>
+</body>
+
+</html>
