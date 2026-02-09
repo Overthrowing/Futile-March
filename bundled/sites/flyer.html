@@ -73,6 +73,59 @@
             padding: 30px;
             border-radius: 10px
         }
+
+        #controls {
+            position: fixed;
+            bottom: 50%;
+            left: 0;
+            right: 0;
+            transform: translateY(50%);
+            display: none;
+            justify-content: space-between;
+            padding: 0 15px;
+            z-index: 100;
+            pointer-events: none
+        }
+
+        @media (max-width: 768px),
+        (pointer: coarse) {
+            #controls {
+                display: flex
+            }
+        }
+
+        .ctrl-btn {
+            width: 60px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            touch-action: manipulation
+        }
+
+        .ctrl-btn:active {
+            background: rgba(255, 255, 255, 0.25)
+        }
+
+        .arrow-left {
+            width: 0;
+            height: 0;
+            border-top: 12px solid transparent;
+            border-bottom: 12px solid transparent;
+            border-right: 16px solid rgba(255, 255, 255, 0.4)
+        }
+
+        .arrow-right {
+            width: 0;
+            height: 0;
+            border-top: 12px solid transparent;
+            border-bottom: 12px solid transparent;
+            border-left: 16px solid rgba(255, 255, 255, 0.4)
+        }
     </style>
 </head>
 
@@ -80,10 +133,18 @@
     <canvas id="c"></canvas>
     <div id="ui">Distance: <span id="dist">0</span>m<br>Speed: <span id="spd">100</span>%</div>
     <div id="score">0m</div>
-    <div id="start">⟡ NEON FLYER ⟡<br><small style="font-size:14px">Tilt to steer • Dodge pillars</small><br><small
-            style="font-size:12px;color:#0ff">TAP TO START</small></div>
+    <div id="start">⟡ NEON FLYER ⟡<br><small style="font-size:14px">Use buttons to steer • Dodge
+            pillars</small><br><small style="font-size:12px;color:#0ff">TAP TO START</small></div>
     <div id="go">GAME OVER<br><span id="fs" style="color:#0ff"></span><br><small style="font-size:16px">Tap to
             retry</small></div>
+    <div id="controls">
+        <div class="ctrl-btn" id="btnLeft">
+            <div class="arrow-left"></div>
+        </div>
+        <div class="ctrl-btn" id="btnRight">
+            <div class="arrow-right"></div>
+        </div>
+    </div>
     <script>
         const C = document.getElementById('c'), G = C.getContext('webgl', { antialias: true, alpha: false });
         let W = C.width = innerWidth, H = C.height = innerHeight;
@@ -251,38 +312,20 @@ void main(){
         function genPillars() { pillars = []; for (let z = 60; z < 3000; z += 15 + Math.random() * 20) { const gap = 4 + Math.random() * 5; const cx = -20 + Math.random() * 40; pillars.push({ x: cx - gap - 2, z, w: 1.5 + Math.random(), h: 8 + Math.random() * 25 }); pillars.push({ x: cx, z, w: 1.5 + Math.random(), h: 8 + Math.random() * 25 }); pillars.push({ x: cx + gap + 2, z, w: 1.5 + Math.random(), h: 8 + Math.random() * 25 }) } }
         genPillars();
 
-        // Device orientation
-        let orientationEnabled = false;
-        function enableOrientation() {
-            if (orientationEnabled) return;
-            orientationEnabled = true;
-            console.log('Orientation enabled!');
-            addEventListener('deviceorientation', e => {
-                gx = e.gamma || 0;
-                gy = e.beta || 0;
-            });
-        }
-        function requestOrientation() {
-            if (orientationEnabled) return;
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission()
-                    .then(response => {
-                        console.log('Permission response:', response);
-                        if (response === 'granted') enableOrientation();
-                    })
-                    .catch(err => console.log('Permission error:', err));
-            } else if (window.DeviceOrientationEvent) {
-                enableOrientation();
-            }
-        }
-        // Request on first interaction
-        document.addEventListener('click', requestOrientation);
-        document.addEventListener('touchend', requestOrientation);
-
-        // Touch controls
-        C.addEventListener('touchstart', e => { touching = true; touchX = e.touches[0].clientX; touchY = e.touches[0].clientY });
-        C.addEventListener('touchmove', e => { if (touching) { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY } });
-        C.addEventListener('touchend', () => touching = false);
+        // Button controls
+        let btnLeftPressed = false, btnRightPressed = false;
+        const btnL = document.getElementById('btnLeft');
+        const btnR = document.getElementById('btnRight');
+        btnL.addEventListener('touchstart', e => { e.preventDefault(); btnLeftPressed = true; });
+        btnL.addEventListener('touchend', e => { e.preventDefault(); btnLeftPressed = false; });
+        btnL.addEventListener('mousedown', () => btnLeftPressed = true);
+        btnL.addEventListener('mouseup', () => btnLeftPressed = false);
+        btnL.addEventListener('mouseleave', () => btnLeftPressed = false);
+        btnR.addEventListener('touchstart', e => { e.preventDefault(); btnRightPressed = true; });
+        btnR.addEventListener('touchend', e => { e.preventDefault(); btnRightPressed = false; });
+        btnR.addEventListener('mousedown', () => btnRightPressed = true);
+        btnR.addEventListener('mouseup', () => btnRightPressed = false);
+        btnR.addEventListener('mouseleave', () => btnRightPressed = false);
 
         // Keyboard
         let keys = {};
@@ -291,15 +334,17 @@ void main(){
 
         function start() { if (!started) { started = true; document.getElementById('start').style.display = 'none' } else if (!alive) { alive = true; px = 0; py = 3; pz = 0; vx = 0; vy = 0; score = 0; speed = isMobile ? .72 : .18; genPillars(); document.getElementById('go').style.display = 'none' } }
         document.addEventListener('click', start);
-        document.addEventListener('touchstart', start);
+        document.addEventListener('touchstart', e => { if (e.target.className !== 'ctrl-btn') start(); });
 
         function collision() { for (let o of pillars) { const dz = pz - o.z; if (dz > -1.5 && dz < o.w + 1) { const dx = Math.abs(px - o.x); if (dx < o.w + .6 && py < o.h + .8) return true } } return py < .5 }
 
         function update() {
             if (!started || !alive) return;
             let ix = 0, iy = 0;
-            if (Math.abs(gx) > .5 || Math.abs(gy) > .5) { ix = gx / 30; iy = (gy - 30) / 40 }
-            else if (touching) { ix = -(touchX - W / 2) / (W / 3); iy = (touchY - H / 2) / (H / 3) } // Inverted X for correct direction
+            // Button input
+            if (btnLeftPressed) ix = 1;
+            if (btnRightPressed) ix = -1;
+            // Keyboard input
             if (keys.ArrowLeft || keys.a) ix = 1;
             if (keys.ArrowRight || keys.d) ix = -1;
             if (keys.ArrowUp || keys.w) iy = -1;

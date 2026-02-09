@@ -1,0 +1,623 @@
+<!doctype html><html lang=en><meta charset=utf-8><meta content="IE=edge" http-equiv=X-UA-Compatible><meta content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" name=viewport><meta content=yes name=apple-mobile-web-app-capable><meta content=black-translucent name=apple-mobile-web-app-status-bar-style><meta content=yes name=mobile-web-app-capable><meta content=#0a0a0f name=theme-color><meta content="Push the boulder up the mountain. A raymarching game inspired by the myth of Sisyphus." name=description><link href=manifest.json rel=manifest><link href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%230a0a0f'/%3E%3Ccircle cx='50' cy='50' r='35' fill='none' stroke='%23d4af37' stroke-width='4'/%3E%3Ccircle cx='50' cy='50' r='20' fill='%23d4af37'/%3E%3C/svg%3E" rel=icon type=image/svg+xml><link href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%230a0a0f'/%3E%3Ccircle cx='50' cy='50' r='35' fill='none' stroke='%23d4af37' stroke-width='4'/%3E%3Ccircle cx='50' cy='50' r='20' fill='%23d4af37'/%3E%3C/svg%3E" rel=apple-touch-icon><title>Sisyphus</title><style>html,body{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;width:100%;height:100dvh;margin:0;padding:0;overflow:hidden}*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0f;font-family:Courier New,monospace;position:fixed;inset:0;overflow:hidden}canvas{display:block;position:fixed;top:0;left:0;width:100%!important;height:100%!important}#progress{color:#d4af37;z-index:100;text-shadow:0 0 10px #d4af3780;pointer-events:none;font-size:24px;position:absolute;top:20px;left:20px}#message{color:#d4af37;text-align:center;z-index:100;text-shadow:0 0 20px #d4af37b3;pointer-events:none;opacity:0;max-width:80%;font-size:22px;transition:opacity .3s;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%)}#message.show{opacity:1}#instructions{color:#888;z-index:100;text-align:center;pointer-events:none;font-size:13px;position:absolute;bottom:20px;left:50%;transform:translate(-50%)}#reset-btn{color:#d4af37;cursor:pointer;z-index:170;touch-action:manipulation;background:#d4af3733;border:2px solid #d4af37;padding:10px 20px;font-family:Courier New,monospace;font-size:14px;transition:all .2s;position:absolute;top:20px;right:20px}#reset-btn:hover{background:#d4af3766;box-shadow:0 0 15px #d4af3780}#wifi-btn{color:#d4af37;cursor:pointer;z-index:170;touch-action:manipulation;background:#d4af3733;border:2px solid #d4af37;align-items:center;gap:8px;padding:10px 20px;font-family:Courier New,monospace;font-size:14px;transition:all .2s;display:flex;position:absolute;top:60px;right:20px}#wifi-btn:hover{background:#d4af3766;box-shadow:0 0 15px #d4af3780}#wifi-btn.active{background:#d4af3780;box-shadow:0 0 20px #d4af3799}#wifi-btn svg{fill:currentColor;width:18px;height:18px}#title-screen{z-index:200;cursor:pointer;background:linear-gradient(#0a0a0f 0%,#1a1020 50%,#0a0a0f 100%);flex-direction:column;justify-content:center;align-items:center;width:100%;height:100dvh;display:flex;position:fixed;inset:0}#title-screen h1{color:#d4af37;text-shadow:0 0 30px #d4af3780;letter-spacing:8px;margin-bottom:20px;font-size:72px}#title-screen p{color:#888;margin-bottom:40px;font-size:18px}#title-screen .start{color:#d4af37;font-size:24px;animation:2s infinite pulse}@keyframes pulse{0%,to{opacity:1}50%{opacity:.5}}.hidden{display:none!important}#mobile-controls{z-index:150;pointer-events:none;position:fixed;inset:0}#look-zone{pointer-events:auto;touch-action:none;z-index:140;width:100%;height:100%;position:fixed;top:0;left:0}#joystick-zone{pointer-events:auto;touch-action:none;z-index:160;background:#d4af3726;border:2px solid #d4af3766;border-radius:50%;width:130px;height:130px;position:fixed;bottom:30px;left:20px}#joystick-knob{pointer-events:none;background:#d4af3780;border:2px solid #d4af37;border-radius:50%;width:55px;height:55px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}#jump-btn{color:#d4af37;pointer-events:auto;touch-action:none;user-select:none;z-index:160;background:#d4af3733;border:3px solid #d4af37;border-radius:50%;justify-content:center;align-items:center;width:75px;height:75px;font-family:Courier New,monospace;font-size:11px;font-weight:700;display:flex;position:fixed;bottom:30px;right:25px}#jump-btn.active{background:#d4af3780;box-shadow:0 0 20px #d4af3799}#mobile-instructions{color:#8889;text-align:center;z-index:165;pointer-events:none;white-space:nowrap;font-size:10px;position:fixed;bottom:8px;left:50%;transform:translate(-50%)}@media (width<=900px),(pointer:coarse){#instructions{display:none!important}#reset-btn{padding:6px 12px;font-size:11px;top:15px;right:15px}#wifi-btn{padding:6px 12px;font-size:11px;top:50px;right:15px}#progress{font-size:16px;top:15px;left:15px}#message{font-size:18px}}@media (width>=901px) and (pointer:fine){#mobile-controls,#mobile-instructions,#look-zone{display:none!important}}</style><body><div id=title-screen><h1>SISYPHUS</h1><p>One must imagine Sisyphus happy.<div class=start>Click to Begin</div></div><div class=hidden id=progress>Height: 0m</div><div id=message></div><button class=hidden id=reset-btn>RESET (R)</button><button class=hidden id=wifi-btn>WIFI</button><audio id=bg-music loop preload=none><source src=https://github.com/Overthrowing/Futile-March/raw/refs/heads/main/vivaldi.mp3></audio><div class=hidden id=instructions>WASD - Move | SPACE - Jump | Hold near boulder to push | R - Reset</div><div class=hidden id=look-zone></div><div class=hidden id=mobile-controls><div id=joystick-zone><div id=joystick-knob></div></div><div id=jump-btn>JUMP</div></div><div class=hidden id=mobile-instructions>Drag anywhere to look | Left stick to move</div></body><script>let libs=`
+float smin(float a, float b, float k) {
+    float h = max(k - abs(a - b), 0.0) / k;
+    return min(a, b) - h * h * k * 0.25;
+}
+
+vec3 bend(vec3 p, float k) {
+    float c = cos(k * p.x), s = sin(k * p.x);
+    return vec3(mat2(c, -s, s, c) * p.xy, p.z);
+}
+
+vec3 rotAxis(vec3 p, float a, vec3 u) {
+    mat3 m = mat3(
+        cos(a) + u.x*u.x*(1.-cos(a)), u.x*u.y*(1.-cos(a))-u.z*sin(a), u.x*u.z*(1.-cos(a)) + u.y*sin(a),
+        u.y*u.x*(1.-cos(a))+u.z*sin(a), cos(a) + u.y*u.y*(1.-cos(a)), u.y*u.z*(1.-cos(a))-u.x*sin(a),
+        u.z*u.x*(1.-cos(a))-u.y*sin(a), u.z*u.y*(1.-cos(a))+u.x*sin(a), cos(a) + u.z*u.z*(1.-cos(a)) 
+    );
+    return m * p;
+}
+
+vec3 rotY(vec3 v, float a) { return vec3(v.x*cos(a)+v.z*sin(a), v.y, -v.x*sin(a) + v.z*cos(a)); }
+vec3 rotX(vec3 v, float a) { return vec3(v.x, v.y*cos(a)-v.z*sin(a), v.y*sin(a)+v.z*cos(a)); }
+vec3 rotZ(vec3 v, float a) { return vec3(v.x*cos(a)-v.y*sin(a), v.x*sin(a)+v.y*cos(a), v.z); }
+
+vec3 twist(vec3 p, float k) {
+    float c = cos(k * p.y), s = sin(k * p.y);
+    return vec3(mat2(c, -s, s, c) * p.xz, p.y);
+}
+
+float dot2(in vec3 v) { return dot(v, v); }
+
+float sdBox(vec3 p, vec3 b) {
+    vec3 q = abs(p) - b;
+    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
+
+float sdCapsule(vec3 p, vec3 a, vec3 b, float r) {
+    vec3 pa = p - a, ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h) - r;
+}
+
+float sdTorus(vec3 p, vec2 t) { return length(vec2(length(p.xz) - t.x, p.y)) - t.y; }
+
+float sdCylinder(vec3 p, float h, float r) {
+    vec2 d = abs(vec2(length(p.xz), p.y)) - vec2(r, h);
+    return min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
+}
+
+float sdSphere(vec3 p, float r) { return length(p) - r; }
+
+float sdRoundCone(vec3 p, vec3 a, vec3 b, float r1, float r2) {
+    vec3 ba = b - a;
+    float l2 = dot(ba, ba), rr = r1 - r2, a2 = l2 - rr * rr, il2 = 1.0 / l2;
+    vec3 pa = p - a;
+    float y = dot(pa, ba), z = y - l2;
+    float x2 = dot2(pa * l2 - ba * y), y2 = y * y * l2, z2 = z * z * l2;
+    float k = sign(rr) * rr * rr * x2;
+    if(sign(z) * a2 * z2 > k) return sqrt(x2 + z2) * il2 - r2;
+    if(sign(y) * a2 * y2 < k) return sqrt(x2 + y2) * il2 - r1;
+    return (sqrt(x2 * a2 * il2) + y * rr) * il2 - r1;
+}
+
+vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+vec4 permute(vec4 x) { return mod289(((x * 34.0) + 1.0) * x); }
+
+float noise(vec3 p) {
+    vec3 a = floor(p), d = p - a;
+    d = d * d * (3.0 - 2.0 * d);
+    vec4 b = a.xxyy + vec4(0.0, 1.0, 0.0, 1.0);
+    vec4 k1 = permute(b.xyxy), k2 = permute(k1.xyxy + b.zzww);
+    vec4 c = k2 + a.zzzz, k3 = permute(c), k4 = permute(c + 1.0);
+    vec4 o1 = fract(k3 * (1.0 / 41.0)), o2 = fract(k4 * (1.0 / 41.0));
+    vec4 o3 = o2 * d.z + o1 * (1.0 - d.z);
+    vec2 o4 = o3.yw * d.x + o3.xz * (1.0 - d.x);
+    return o4.y * d.y + o4.x * (1.0 - d.y);
+}
+
+float fbm(vec3 p) {
+    float f = 0.5 * noise(p); p *= 2.01;
+    f += 0.25 * noise(p); p *= 2.02;
+    f += 0.125 * noise(p); p *= 2.03;
+    f += 0.0625 * noise(p);
+    return f / 0.9375;
+}
+
+vec3 nmzHash33(vec3 q) {
+    uvec3 p = uvec3(ivec3(q));
+    p = p * uvec3(374761393U, 1103515245U, 668265263U) + p.zxy + p.yzx;
+    p = p.yzx * (p.zxy ^ (p >> 3U));
+    return vec3(p ^ (p >> 16U)) * (1.0 / vec3(0xffffffffU));
+}
+
+vec3 stars(in vec3 p) {
+    vec3 c = vec3(0.);
+    float resX = 400.;
+    for(float i = 0.; i < 4.; i++) {
+        vec3 q = fract(p * (.15 * resX)) - 0.5;
+        vec3 id = floor(p * (.15 * resX));
+        vec2 rn = nmzHash33(id).xy;
+        float c2 = 1. - smoothstep(0., .6, length(q));
+        c2 *= step(rn.x, .0005 + i * 0.002);
+        c += c2 * (mix(vec3(1.0, 0.49, 0.1), vec3(0.75, 0.9, 1.), rn.y) * 0.25 + 0.75);
+        p *= 1.4;
+    }
+    return c * c * 0.5;
+}
+`,libsAfterDe=`
+vec3 grad(vec3 p) {
+    float eps = 0.01;
+    return normalize(vec3(
+        (de(p + vec3(eps, 0., 0.)) - de(p - vec3(eps, 0., 0.))) / (2. * eps),
+        (de(p + vec3(0., eps, 0.)) - de(p - vec3(0., eps, 0.))) / (2. * eps),
+        (de(p + vec3(0., 0., eps)) - de(p - vec3(0., 0., eps))) / (2. * eps)
+    ));
+}
+
+float ao(vec3 p, vec3 n) {
+    float occ = 0.0, sca = 1.0;
+    for(int i = 0; i < 5; i++) {
+        float h = 0.01 + 0.12 * float(i) / 4.0;
+        occ += (h - de(p + h * n)) * sca;
+        sca *= 0.95;
+    }
+    return clamp(1.0 - 3.0 * occ, 0.0, 1.0);
+}
+`;
+// JS Math utilities
+function rotY(v,a){return[v[0]*Math.cos(a)+v[2]*Math.sin(a),v[1],-v[0]*Math.sin(a)+v[2]*Math.cos(a)]}function rotX(v,a){return[v[0],v[1]*Math.cos(a)-v[2]*Math.sin(a),v[1]*Math.sin(a)+v[2]*Math.cos(a)]}function plus(a1,a2){return[a1[0]+a2[0],a1[1]+a2[1],a1[2]+a2[2]]}function times(a,s){return[a[0]*s,a[1]*s,a[2]*s]}function min(...args){return Math.min(...args)}function max(...args){return Math.max(...args)}function abs(x){return Array.isArray(x)?x.map(Math.abs):Math.abs(x)}function cos(x){return Array.isArray(x)?x.map(Math.cos):Math.cos(x)}function sin(x){return Array.isArray(x)?x.map(Math.sin):Math.sin(x)}function len(v){return Math.hypot(...v)}function normalize(v){let l=len(v);return l===0?[0,0,0]:times(v,1/l)}function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]}function cross(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]}function reflect(d,n){return plus(d,times(n,-2*dot(d,n)))}function lerp(a,b,w){return Array.isArray(a)?a.map((v,i)=>v+(b[i]-v)*w):a+(b-a)*w}function sinLerp(a,b,w){return lerp(a,b,Math.sin(Math.PI*(w-.5))/2+.5)}function clamp(x,lo,hi){return Math.min(Math.max(x,lo),hi)}function smoothstepJS(e0,e1,x){let t=clamp((x-e0)/(e1-e0),0,1);return t*t*(3-2*t)}function I(){return[[1,0,0],[0,1,0],[0,0,1]]}function matTimes(m,v){return[m[0][0]*v[0]+m[0][1]*v[1]+m[0][2]*v[2],m[1][0]*v[0]+m[1][1]*v[1]+m[1][2]*v[2],m[2][0]*v[0]+m[2][1]*v[1]+m[2][2]*v[2]]}function matTimesMat(a,b){let temp=[[],[],[]];for(let i=0;i<3;i++){let col=matTimes(a,[b[0][i],b[1][i],b[2][i]]);for(let j=0;j<3;j++)temp[j].push(col[j])}return temp}function rotAxisMat(a,u){let c=Math.cos(a),s=Math.sin(a);return[[c+u[0]*u[0]*(1-c),u[0]*u[1]*(1-c)-u[2]*s,u[0]*u[2]*(1-c)+u[1]*s],[u[1]*u[0]*(1-c)+u[2]*s,c+u[1]*u[1]*(1-c),u[1]*u[2]*(1-c)-u[0]*s],[u[2]*u[0]*(1-c)-u[1]*s,u[2]*u[1]*(1-c)+u[0]*s,c+u[2]*u[2]*(1-c)]]}function sdBox3(p,b){let q=plus(abs(p),times(b,-1));return len([max(q[0],0),max(q[1],0),max(q[2],0)])+min(max(q[0],q[1],q[2]),0)}function dirFromAngle(ax,ay){return rotY(rotX([0,0,1],-ay),ax)}function getMountainHeight(x,z){return Math.max(0,z*.3+Math.sin(x*.1)*2+Math.sin(z*.05)*3)}function getSlopeAngle(z){return Math.atan(.3)}function isOnPath(x,z){return Math.abs(x)<6}function deNormal(p){let eps=.01;return normalize([de(plus(p,[eps,0,0]))-de(plus(p,[-eps,0,0])),de(plus(p,[0,eps,0]))-de(plus(p,[0,-eps,0])),de(plus(p,[0,0,eps]))-de(plus(p,[0,0,-eps]))])}function getBumpyHeight(x,z){let bumps=0;for(let zone of[{zMin:18,zMax:30,freq:3,amp:.15},{zMin:48,zMax:60,freq:4,amp:.2,offset:1},{zMin:93,zMax:105,freq:5,amp:.18,offset:2}])if(z>zone.zMin&&z<zone.zMax&&Math.abs(x)<5){let fade=smoothstepJS(zone.zMin,zone.zMin+2,z)*smoothstepJS(zone.zMax,zone.zMax-2,z);bumps+=Math.sin(x*zone.freq+(zone.offset||0))*Math.sin(z*zone.freq)*zone.amp*fade}return bumps}function getTerrainHeight(x,z){return Math.max(-5,z*.3+Math.sin(x*.1)*2+Math.sin(z*.05)*3+getBumpyHeight(x,z))}function simpleNoise(x,z){return Math.sin(x*1.3+z*.7)*Math.cos(x*.9-z*1.1)*.5}</script><script>function Animator(uniforms,interp){this.uniforms=uniforms,this.interp=interp||lerp,this.states=[],this.state=-1,this.stateT=0,this.totalStateT=0,this.stateFrames=[],this.t=0,this.totalAnimTime=0,this.keyFrames=[],this.addKeyFrame=(nodes,t,state)=>{this.states[state]||(this.states[state]={keyFrames:[],totalAnimTime:0}),this.states[state].keyFrames.push({nodes,t}),t>this.states[state].totalAnimTime&&(this.states[state].totalAnimTime=t),this.states.length===1&&(this.keyFrames=this.states[state].keyFrames,this.totalAnimTime=this.states[state].totalAnimTime)},this.currentPos=()=>this.getPos(this.t),this.setState=(state,changeT)=>{this.state!==state&&(this.state=state,this.t=0,this.stateFrames=[this.getPos(this.t)],this.keyFrames=this.states[state].keyFrames,this.totalAnimTime=this.states[state].totalAnimTime,this.stateT=changeT,this.totalStateT=changeT,this.stateFrames.push(this.keyFrames[0].nodes))},this.getPos=time=>{if(this.stateT<=0){if(this.keyFrames.length===1)return this.keyFrames[0].nodes;time%=this.totalAnimTime;let index=0;if(time>this.keyFrames[this.keyFrames.length-2].t)index=this.keyFrames.length-2;else{for(;time>=this.keyFrames[index].t;)index++;index--}return this.keyFrames[index].nodes.map((n,i)=>this.interp(n,this.keyFrames[index+1].nodes[i],(time-this.keyFrames[index].t)/(this.keyFrames[index+1].t-this.keyFrames[index].t)))}else{this.stateT-=dt;let w=1-this.stateT/this.totalStateT;return this.t=0,this.stateFrames[0].map((n,i)=>this.interp(n,this.stateFrames[1][i],w))}},this.update=()=>{this.t+=dt;let pos=this.getPos(this.t);this.uniforms.forEach((u,i)=>renderer.setUni(u,pos[i]))}}</script><script>function getViewportSize(){let vv=window.visualViewport;return{width:vv?vv.width:window.innerWidth,height:vv?vv.height:window.innerHeight}}function createGraphics(de,colors,otherfunctions,uniforms){let c=document.createElement(`canvas`),size=getViewportSize();c.width=size.width,c.height=size.height,document.body.appendChild(c),c.onclick=()=>c.requestPointerLock();let gl=c.getContext(`webgl2`),makeShader=(src,type)=>{let shader=gl.createShader(type);if(gl.shaderSource(shader,src),gl.compileShader(shader),gl.getShaderParameter(shader,gl.COMPILE_STATUS))return shader;console.log(gl.getShaderInfoLog(shader)),gl.deleteShader(shader)},vertSrc=`#version 300 es
+    in vec4 a_position;
+    out vec4 pos4;
+    void main() { pos4 = a_position; gl_Position = a_position; }`,fragSrc=`#version 300 es
+    #define MIN_DIST 0.002
+    #define MAX_ITERATIONS 120
+    #define RANGE 500.
+    precision highp float;
+    out vec4 color;
+    in vec4 pos4;
+    uniform vec2 res; uniform vec3 camPos; uniform vec2 camAngle; uniform float t;
+    uniform vec3 playerPos; uniform vec3 boulderPos; uniform mat3 boulderRotMat;
+    uniform vec2 playerAngle; uniform float isPushing; uniform float gameState;
+    ${uniforms}
+    ${libs}
+    ${de}
+    ${libsAfterDe}
+    ${otherfunctions}
+    void main() {
+        vec2 pos = pos4.xy;
+        pos.x *= res.x / res.y;
+        vec3 dir = normalize(vec3(pos.x * 0.4, pos.y * 0.4, 0.6));
+        dir = rotX(dir, -camAngle.y);
+        dir = rotY(dir, camAngle.x);
+        vec3 p = camPos;
+        float dist = de(p), totDist = dist;
+        float glowDist = boulderGlow(p), minGlow = glowDist;
+        for(int i = 0; i < MAX_ITERATIONS; i++) {
+            if(dist < MIN_DIST || totDist > RANGE) break;
+            p += dir * dist;
+            dist = de(p);
+            glowDist = boulderGlow(p);
+            if(glowDist < minGlow) minGlow = glowDist;
+            totDist += dist;
+        }
+        ${colors}
+    }`,program=gl.createProgram();gl.attachShader(program,makeShader(`#version 300 es
+    in vec4 a_position;
+    out vec4 pos4;
+    void main() { pos4 = a_position; gl_Position = a_position; }`,gl.VERTEX_SHADER)),gl.attachShader(program,makeShader(fragSrc,gl.FRAGMENT_SHADER)),gl.linkProgram(program);let posLoc=gl.getAttribLocation(program,`a_position`),posBuffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,posBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,-1,1,1,1,1,1,1,-1,-1,-1]),gl.STATIC_DRAW);let va=gl.createVertexArray();return gl.bindVertexArray(va),gl.enableVertexAttribArray(posLoc),gl.vertexAttribPointer(posLoc,2,gl.FLOAT,!1,0,0),gl.viewport(0,0,c.width,c.height),gl.clearColor(0,0,0,0),gl.clear(gl.COLOR_BUFFER_BIT),gl.useProgram(program),{gl,program,c}}function Renderer(de,colors,otherfunctions,uniforms){let{gl,program,c}=createGraphics(de,colors,otherfunctions,uniforms);this.gl=gl,this.canvas=c,this.program=program,this.uniforms={},this.addUniform=(name,type,value)=>{Array.isArray(value)&&!Array.isArray(value[0])&&(value=new Float32Array(value));let uni={location:gl.getUniformLocation(program,name),value};type===`vec2`?uni.set=(l,v)=>gl.uniform2fv(l,v):type===`vec3`?uni.set=(l,v)=>gl.uniform3fv(l,v):type===`vec4`?uni.set=(l,v)=>gl.uniform4fv(l,v):type===`float`?uni.set=(l,v)=>gl.uniform1f(l,v):type===`mat3`&&(uni.set=(l,v)=>gl.uniformMatrix3fv(l,!1,new Float32Array(v.flat()))),this.uniforms[name]=uni,uni.set(uni.location,uni.value)},this.setUni=(name,value)=>{Array.isArray(value)&&!Array.isArray(value[0])&&(value=new Float32Array(value));let uni=this.uniforms[name];uni.value=value,uni.set(uni.location,value)},this.draw=()=>gl.drawArrays(gl.TRIANGLES,0,6)}</script><script>let renderer=new Renderer(`
+float fbm2(vec2 p) {
+    float f = 0.0;
+    mat2 m2 = mat2(0.8, -0.6, 0.6, 0.8);
+    f += 0.5 * noise(vec3(p, 0.0)); p = m2 * p * 2.02;
+    f += 0.25 * noise(vec3(p, 0.0)); p = m2 * p * 2.03;
+    f += 0.125 * noise(vec3(p, 0.0)); p = m2 * p * 2.01;
+    f += 0.0625 * noise(vec3(p, 0.0));
+    return f / 0.9375;
+}
+
+float mountainHeight(vec3 p) {
+    return max(-5.0, p.z * 0.3 + sin(p.x * 0.1) * 2.0 + sin(p.z * 0.05) * 3.0);
+}
+
+float bumpySection(vec3 p) {
+    float bumps = 0.0;
+    if(p.z > 18.0 && p.z < 30.0 && abs(p.x) < 5.0) {
+        float fade = smoothstep(18.0, 20.0, p.z) * smoothstep(30.0, 28.0, p.z);
+        bumps += sin(p.x * 3.0) * sin(p.z * 3.0) * 0.15 * fade;
+    }
+    if(p.z > 48.0 && p.z < 60.0 && abs(p.x) < 5.0) {
+        float fade = smoothstep(48.0, 50.0, p.z) * smoothstep(60.0, 58.0, p.z);
+        bumps += sin(p.x * 4.0 + 1.0) * sin(p.z * 4.0) * 0.2 * fade;
+    }
+    if(p.z > 93.0 && p.z < 105.0 && abs(p.x) < 5.0) {
+        float fade = smoothstep(93.0, 95.0, p.z) * smoothstep(105.0, 103.0, p.z);
+        bumps += sin(p.x * 5.0 + 2.0) * sin(p.z * 5.0) * 0.18 * fade;
+    }
+    return bumps;
+}
+
+float mountain(vec3 p) {
+    float h = mountainHeight(p);
+    float rocky = fbm(p * 0.15) * 0.3;
+    float bumps = bumpySection(p);
+    float ground = p.y - h - rocky - bumps;
+    
+    // Add extra mountains outside the path
+    float pathDist = abs(p.x);
+    float pathWidth = 6.0, pathDepth = 0.5;
+    float pathCarve = smoothstep(pathWidth, pathWidth - 1.0, pathDist) * pathDepth;
+    
+    // Side mountains - higher terrain outside path (pushed back to avoid clipping)
+    float sideMountains = 0.0;
+    if(pathDist > 10.0) {
+        float sideHeight = 10.0 * fbm2(p.xz * 0.04) + 5.0 * fbm2(p.xz * 0.08);
+        sideMountains = -sideHeight * smoothstep(10.0, 20.0, pathDist);
+    }
+    
+    return ground + pathCarve + sideMountains;
+}
+
+float spinningBar(vec3 p, vec3 barPos, float barAngle) {
+    vec3 q = p - barPos;
+    q = rotX(q, 0.29);
+    q = rotY(q, barAngle);
+    return min(sdCapsule(q, vec3(-4.0, 0.0, 0.0), vec3(4.0, 0.0, 0.0), 0.3), sdCylinder(q, 3.0, 0.2));
+}
+
+float floorBeam(vec3 p, vec3 beamPos, float width) {
+    vec3 q = rotX(p - beamPos, 0.29);
+    return sdBox(q, vec3(width, 0.15, 0.3));
+}
+
+float hole(vec3 p, vec3 holePos, float radius) {
+    vec2 d = vec2(length(p.xz - holePos.xz) - radius, p.y - holePos.y);
+    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+}
+
+// JD Vance head features
+float jdHair(vec3 p) {
+    // Swept back hair on top
+    vec3 hp = p - vec3(0.0, 0.8, -0.3);
+    float hair = sdSphere(hp, 1.8) - 0.15 * noise(p * 4.0);
+    hair = max(hair, -p.y + 0.3); // Cut bottom
+    hair = max(hair, p.z + 0.5);  // Cut front
+    return hair;
+}
+
+float jdEars(vec3 p) {
+    float earR = sdSphere(p - vec3(1.9, 0.0, 0.0), 0.4);
+    float earL = sdSphere(p - vec3(-1.9, 0.0, 0.0), 0.4);
+    return min(earR, earL);
+}
+
+float jdFace(vec3 p) {
+    // Eye sockets
+    float eyeR = sdSphere(p - vec3(0.6, 0.4, 1.6), 0.35);
+    float eyeL = sdSphere(p - vec3(-0.6, 0.4, 1.6), 0.35);
+    // Nose
+    float nose = sdRoundCone(p, vec3(0.0, 0.2, 1.8), vec3(0.0, -0.3, 2.2), 0.25, 0.15);
+    // Mouth area
+    float mouth = sdCapsule(p, vec3(-0.5, -0.6, 1.6), vec3(0.5, -0.6, 1.6), 0.12);
+    // Chin
+    float chin = sdSphere(p - vec3(0.0, -1.0, 1.3), 0.5);
+    return min(min(min(min(eyeR, eyeL), nose), mouth), chin);
+}
+
+float boulder(vec3 p) {
+    if(length(p - boulderPos) > 5.0) return sdSphere(p - boulderPos, 2.5);
+    vec3 q = boulderRotMat * (p - boulderPos);
+    // Main head shape - elongated sphere
+    float head = sdSphere(q * vec3(1.0, 0.9, 1.0), 2.0);
+    // Add chin bulge
+    head = smin(head, sdSphere(q - vec3(0.0, -0.8, 0.8), 1.0), 0.5);
+    // Add forehead
+    head = smin(head, sdSphere(q - vec3(0.0, 0.6, 0.5), 1.3), 0.4);
+    // Carve out features
+    head = smin(head, jdFace(q), 0.3);
+    // Add ears
+    head = smin(head, jdEars(q), 0.2);
+    // Add hair on top
+    head = smin(head, jdHair(q), 0.15);
+    return head;
+}
+
+float boulderSimple(vec3 p) { return sdSphere(p - boulderPos, 2.5); }
+
+float playerHead(vec3 p) {
+    p -= uHeadPos;
+    float head = sdSphere(p - vec3(0.0, 0.4, 0.0), 0.2);
+    float nose = sdSphere(p - vec3(0.0, 0.37, 0.18), 0.08);
+    float beard = sdRoundCone(p, vec3(0.0, 0.25, 0.1), vec3(0.0, 0.1, 0.05), 0.12, 0.08);
+    return smin(smin(head, nose, 0.1), beard, 0.08);
+}
+
+float playerDiaper(vec3 p) {
+    vec3 dp = p + uChestPos + vec3(0.0, 0.25, -0.05);
+    // Puffy diaper shape
+    float diaper = sdSphere(dp * vec3(1.0, 1.3, 0.9), 0.18);
+    // Add side puffs
+    diaper = smin(diaper, sdSphere((dp - vec3(0.1, 0.0, 0.0)) * vec3(1.2, 1.0, 1.0), 0.12), 0.08);
+    diaper = smin(diaper, sdSphere((dp - vec3(-0.1, 0.0, 0.0)) * vec3(1.2, 1.0, 1.0), 0.12), 0.08);
+    return diaper;
+}
+
+float playerBody(vec3 p) {
+    vec3 chestP = p + uChestPos;
+    float torso = sdRoundCone(chestP, vec3(0.0, 0.15, 0.0), vec3(0.0, -0.15, -0.1), 0.2, 0.12);
+    float pushOffset = isPushing * 0.15;
+    float rArm = sdCapsule(chestP, vec3(0.2, 0.1, 0.0), vec3(0.15, 0.1 - pushOffset, 0.2 + pushOffset), 0.05);
+    float lArm = sdCapsule(chestP, vec3(-0.2, 0.1, 0.0), vec3(-0.15, 0.1 - pushOffset, 0.2 + pushOffset), 0.05);
+    // Add diaper
+    float diaper = playerDiaper(p);
+    return min(min(min(torso, rArm), lArm), diaper);
+}
+
+float playerLegs(vec3 p) {
+    float thigh1 = sdCapsule(p, uhip1, ujr1, 0.04);
+    float shin1 = sdCapsule(p, ujr1, ujr2, 0.035);
+    float foot1 = sdCapsule(p, ujr2, ujr3, 0.03);
+    float thigh2 = sdCapsule(p, uhip2, ujl1, 0.04);
+    float shin2 = sdCapsule(p, ujl1, ujl2, 0.035);
+    float foot2 = sdCapsule(p, ujl2, ujl3, 0.03);
+    return min(min(min(thigh1, shin1), min(foot1, thigh2)), min(shin2, foot2));
+}
+
+float player(vec3 p) {
+    vec3 q = p - playerPos;
+    if(length(q) > 1.5) return sdSphere(q, 1.0);
+    q = rotY(q, -playerAngle.x);
+    vec3 bodyP = rotX(q, uBodyAngle.y);
+    return min(min(playerHead(bodyP), playerBody(bodyP)), playerLegs(q));
+}
+
+float allSpinningBars(vec3 p) {
+    float d = 1000.0;
+    d = min(d, spinningBar(p, vec3(0.0, mountainHeight(vec3(0,0,30)) + 1.5, 30.0), t * 1.5));
+    d = min(d, spinningBar(p, vec3(0.0, mountainHeight(vec3(0,0,60)) + 1.5, 60.0), -t * 2.0));
+    d = min(d, spinningBar(p, vec3(0.0, mountainHeight(vec3(0,0,90)) + 1.5, 90.0), t * 1.2 + 1.57));
+    d = min(d, spinningBar(p, vec3(0.0, mountainHeight(vec3(0,0,120)) + 1.5, 120.0), -t * 1.8 + 0.785));
+    return d;
+}
+
+float allHoles(vec3 p) {
+    float d = 1000.0;
+    float surfaceExtra = 2.0;
+    vec3 h1 = vec3(2.5, mountainHeight(vec3(2.5, 0, 45)) - 5.0, 45.0);
+    vec3 h2 = vec3(-2.0, mountainHeight(vec3(-2, 0, 75)) - 5.0, 75.0);
+    vec3 h3 = vec3(1.5, mountainHeight(vec3(1.5, 0, 105)) - 5.0, 105.0);
+    if(p.y < h1.y + 5.0 + surfaceExtra) d = min(d, max(length(p.xz - h1.xz) - 3.0, -(p.y - h1.y)));
+    if(p.y < h2.y + 5.0 + surfaceExtra) d = min(d, max(length(p.xz - h2.xz) - 2.5, -(p.y - h2.y)));
+    if(p.y < h3.y + 5.0 + surfaceExtra) d = min(d, max(length(p.xz - h3.xz) - 2.0, -(p.y - h3.y)));
+    return d;
+}
+
+float tiltedBox(vec3 p, vec3 boxPos, vec3 size) {
+    return sdBox(rotX(p - boxPos, 0.29), size);
+}
+
+float allBoxes(vec3 p) {
+    float d = 1000.0;
+    d = min(d, tiltedBox(p, vec3(-3.0, mountainHeight(vec3(-3,0,15)) + 1.0, 15.0), vec3(1.0)));
+    d = min(d, tiltedBox(p, vec3(2.5, mountainHeight(vec3(2.5,0,25)) + 0.75, 25.0), vec3(0.75)));
+    d = min(d, tiltedBox(p, vec3(-1.5, mountainHeight(vec3(-1.5,0,40)) + 1.2, 40.0), vec3(1.2, 1.2, 0.8)));
+    d = min(d, tiltedBox(p, vec3(3.5, mountainHeight(vec3(3.5,0,55)) + 0.9, 55.0), vec3(0.9, 0.9, 1.1)));
+    d = min(d, tiltedBox(p, vec3(-4.0, mountainHeight(vec3(-4,0,70)) + 1.5, 70.0), vec3(1.5, 1.5, 1.0)));
+    d = min(d, tiltedBox(p, vec3(1.0, mountainHeight(vec3(1,0,85)) + 0.8, 85.0), vec3(0.8)));
+    d = min(d, tiltedBox(p, vec3(-2.5, mountainHeight(vec3(-2.5,0,100)) + 1.1, 100.0), vec3(1.1, 1.1, 0.9)));
+    d = min(d, tiltedBox(p, vec3(4.0, mountainHeight(vec3(4,0,115)) + 1.3, 115.0), vec3(1.3, 1.0, 1.2)));
+    d = min(d, tiltedBox(p, vec3(0.5, mountainHeight(vec3(0.5,0,130)) + 0.7, 130.0), vec3(0.7)));
+    d = min(d, tiltedBox(p, vec3(-3.5, mountainHeight(vec3(-3.5,0,140)) + 1.0, 140.0), vec3(1.0)));
+    return d;
+}
+
+float allFloorBeams(vec3 p) {
+    float d = 1000.0;
+    d = min(d, floorBeam(p, vec3(0.0, mountainHeight(vec3(0,0,10)) + 0.15, 10.0), 2.5));
+    d = min(d, floorBeam(p, vec3(-1.0, mountainHeight(vec3(-1,0,35)) + 0.15, 35.0), 3.5));
+    d = min(d, floorBeam(p, vec3(1.5, mountainHeight(vec3(1.5,0,52)) + 0.15, 52.0), 3.0));
+    d = min(d, floorBeam(p, vec3(0.0, mountainHeight(vec3(0,0,68)) + 0.15, 68.0), 4.5));
+    d = min(d, floorBeam(p, vec3(-0.5, mountainHeight(vec3(-0.5,0,82)) + 0.15, 82.0), 3.5));
+    d = min(d, floorBeam(p, vec3(0.5, mountainHeight(vec3(0.5,0,98)) + 0.15, 98.0), 4.0));
+    d = min(d, floorBeam(p, vec3(-1.0, mountainHeight(vec3(-1,0,112)) + 0.15, 112.0), 3.0));
+    d = min(d, floorBeam(p, vec3(0.0, mountainHeight(vec3(0,0,125)) + 0.15, 125.0), 5.0));
+    return d;
+}
+
+float boulderGlow(vec3 p) { return boulderSimple(p); }
+
+float de(vec3 p) {
+    float ground = max(mountain(p), -allHoles(p));
+    float d = min(ground, allSpinningBars(p));
+    d = min(d, allBoxes(p));
+    d = min(d, allFloorBeams(p));
+    d = min(d, boulder(p));
+    return min(d, player(p));
+}
+`,`
+// HELLFIRE lighting setup
+vec3 sunDir = normalize(vec3(0.5, 0.2, 0.8));
+float sundot = clamp(dot(dir, sunDir), 0.0, 1.0);
+
+// Hell sky colors - fiery reds and oranges
+vec3 hellRed = vec3(0.6, 0.1, 0.05);
+vec3 hellOrange = vec3(0.9, 0.4, 0.1);
+vec3 hellBlack = vec3(0.05, 0.02, 0.02);
+vec3 horizonCol = vec3(1.0, 0.3, 0.05);
+
+vec3 col = vec3(0.0);
+
+if(dist <= MIN_DIST) {
+    vec3 norm = grad(p);
+    float occ = ao(p, norm);
+    
+    // Main sun light - brighter to match sky
+    float diff = max(dot(norm, sunDir), 0.0);
+    // Fill light from opposite side
+    vec3 fillDir = normalize(vec3(-0.3, 0.5, -0.5));
+    float fill = max(dot(norm, fillDir), 0.0) * 0.35;
+    // Ambient - brighter base
+    float amb = 0.25 + 0.15 * norm.y;
+    
+    if(mountain(p) < 0.01) {
+        // Hellish charred rock colors
+        vec3 rockCol = mix(vec3(0.15, 0.08, 0.05), vec3(0.25, 0.15, 0.1), fbm(p * 1.5));
+        
+        // Path has lava glow hints
+        float onPath = smoothstep(6.0, 4.0, abs(p.x));
+        vec3 lavaHint = vec3(0.4, 0.15, 0.05) + vec3(0.2, 0.05, 0.0) * sin(p.z * 0.5 + t * 0.5);
+        rockCol = mix(rockCol, lavaHint, onPath * 0.3);
+        
+        // Side mountains - multi-colored bands based on height
+        float sideFade = smoothstep(10.0, 18.0, abs(p.x));
+        if(sideFade > 0.0) {
+            // Height with noise variation
+            float mountainH = p.y + fbm(p * 0.3) * 3.0;
+            float vegNoise = fbm(p * 0.8);
+            
+            // Charred dead colors instead of vegetation
+            vec3 ashCol = mix(vec3(0.1, 0.08, 0.07), vec3(0.18, 0.12, 0.1), vegNoise);
+            vec3 burntCol = mix(vec3(0.08, 0.05, 0.04), vec3(0.15, 0.08, 0.06), fbm(p * 1.2));
+            
+            // Start with burnt/ash colors
+            vec3 sideCol = mix(burntCol, ashCol, smoothstep(0.0, 10.0, mountainH));
+            
+            // Higher = more black/charred
+            sideCol = mix(sideCol, vec3(0.05, 0.03, 0.03), smoothstep(15.0, 40.0, mountainH));
+            
+            rockCol = mix(rockCol, sideCol, sideFade);
+        }
+        
+        col = rockCol * (amb + diff * 0.7 + fill) * occ;
+        
+        // Height-based hellish tint
+        col = mix(col, col * vec3(1.1, 0.9, 0.85), smoothstep(0.0, 60.0, p.y) * 0.25);
+    }
+    else if(allSpinningBars(p) < 0.01) {
+        vec3 metalCol = vec3(0.5, 0.3, 0.25);
+        float spec = pow(max(dot(reflect(-sunDir, norm), normalize(camPos - p)), 0.0), 32.0);
+        col = metalCol * (amb + diff * 0.6) + vec3(1.0, 0.5, 0.3) * spec * 0.5;
+        col += vec3(1.0, 0.35, 0.1) * (0.12 + 0.08 * sin(t * 5.0));
+    }
+    else if(allBoxes(p) < 0.01) {
+        // Burnt wooden crates
+        vec3 woodBase = vec3(0.25, 0.15, 0.08);
+        vec3 woodLight = vec3(0.35, 0.22, 0.12);
+        vec3 woodDark = vec3(0.12, 0.08, 0.05);
+        
+        // Wood grain along planks
+        float grain = sin(p.y * 40.0 + noise(p * 8.0) * 8.0) * 0.5 + 0.5;
+        grain *= sin(p.x * 3.0 + p.z * 3.0 + noise(p * 2.0) * 2.0) * 0.3 + 0.7;
+        vec3 crateCol = mix(woodBase, woodLight, grain * 0.4);
+        
+        // Plank lines
+        float plankX = abs(fract(p.x * 1.5) - 0.5);
+        float plankY = abs(fract(p.y * 1.5) - 0.5);
+        float plankZ = abs(fract(p.z * 1.5) - 0.5);
+        float planks = min(min(plankX, plankY), plankZ);
+        float plankEdge = smoothstep(0.02, 0.06, planks);
+        crateCol = mix(woodDark, crateCol, plankEdge);
+        
+        crateCol *= 0.85 + 0.15 * noise(p * 12.0);
+        
+        col = crateCol * (amb + diff * 0.65 + fill) * occ;
+    }
+    else if(allFloorBeams(p) < 0.01) {
+        vec3 woodCol = vec3(0.2, 0.12, 0.08);
+        woodCol = mix(woodCol, vec3(0.3, 0.18, 0.1), (sin(p.x * 20.0 + noise(p * 3.0) * 5.0) * 0.5 + 0.5) * 0.3);
+        col = woodCol * (amb + diff * 0.55) * occ;
+    }
+    else if(boulder(p) < 0.01) {
+        vec3 q = boulderRotMat * (p - boulderPos);
+        
+        // JD Vance skin tones
+        vec3 skinBase = vec3(0.85, 0.65, 0.55);
+        vec3 skinDark = vec3(0.6, 0.4, 0.35);
+        vec3 skinLight = vec3(0.95, 0.8, 0.7);
+        
+        // Skin texture
+        float skinNoise = fbm(q * 3.0) * 0.3 + noise(q * 8.0) * 0.1;
+        vec3 faceCol = mix(skinBase, skinLight, skinNoise);
+        
+        // Darker around eyes and under chin
+        float eyeArea = smoothstep(0.8, 0.3, length(q.xy - vec2(0.6, 0.4))) + smoothstep(0.8, 0.3, length(q.xy - vec2(-0.6, 0.4)));
+        faceCol = mix(faceCol, skinDark, eyeArea * 0.3);
+        
+        // Hair color - dark brown/black
+        vec3 hairCol = vec3(0.15, 0.1, 0.08);
+        if(jdHair(q) < 0.1) {
+            faceCol = mix(hairCol, hairCol * 1.2, noise(q * 10.0));
+        }
+        
+        // Eyes - dark
+        float eyeR = sdSphere(q - vec3(0.6, 0.4, 1.6), 0.2);
+        float eyeL = sdSphere(q - vec3(-0.6, 0.4, 1.6), 0.2);
+        if(min(eyeR, eyeL) < 0.05) faceCol = vec3(0.1, 0.08, 0.06);
+        
+        col = faceCol * (amb + diff * 0.6 + fill * 0.4) * occ;
+        
+        // Hellish glow when pushed
+        col += vec3(1.0, 0.3, 0.1) * isPushing * 0.25;
+    }
+    else if(player(p) < 0.01) {
+        vec3 q = rotY(p - playerPos, -playerAngle.x);
+        vec3 bodyP = rotX(q, uBodyAngle.y);
+        vec3 skinCol = vec3(0.78, 0.62, 0.52);
+        if(playerHead(bodyP) < 0.01) {
+            col = skinCol * (amb + diff * 0.5);
+            float eyeR = sdSphere(bodyP - uHeadPos - vec3(0.08, 0.45, 0.12), 0.03);
+            float eyeL = sdSphere(bodyP - uHeadPos - vec3(-0.08, 0.45, 0.12), 0.03);
+            if(min(eyeR, eyeL) < 0.01) col = vec3(0.1);
+        }
+        else if(playerDiaper(bodyP) < 0.01) {
+            // White diaper
+            vec3 diaperCol = vec3(0.95, 0.95, 0.9);
+            col = diaperCol * (amb + diff * 0.7);
+        }
+        else if(playerBody(bodyP) < 0.01) {
+            vec3 clothCol = vec3(0.82, 0.76, 0.66);
+            col = mix(clothCol * (amb + diff * 0.55), vec3(0.88, 0.6, 0.5), isPushing * 0.12);
+        }
+        else col = skinCol * (amb + diff * 0.5);
+    }
+    
+    // Hellfire fog - smoky red
+    float fo = 1.0 - exp(-totDist * 0.008);
+    vec3 fogCol = mix(hellRed, hellOrange, pow(sundot, 4.0));
+    col = mix(col, fogCol, fo);
+    
+} else {
+    // HELLFIRE SKY
+    // Dark to fiery gradient
+    vec3 sky = mix(hellBlack, hellRed, smoothstep(-0.3, 0.5, dir.y));
+    sky = mix(sky, hellOrange, pow(max(dir.y, 0.0), 2.0) * 0.5);
+    col = sky;
+    
+    // Smoky dark clouds
+    vec2 smokeUV = dir.xz / (abs(dir.y) + 0.3) * 8.0 + t * 0.05;
+    float smoke = fbm2(smokeUV * 0.1) * 0.7 + fbm2(smokeUV * 0.2 + 5.0) * 0.3;
+    smoke = smoothstep(0.3, 0.7, smoke);
+    col = mix(col, hellBlack * 0.5, smoke * 0.6);
+    
+    // FLAMING COMETS - inlined calculations
+    vec3 comet1Dir = normalize(vec3(sin(t * 0.3), 0.4, cos(t * 0.3)));
+    float c1Dot = max(dot(dir, comet1Dir), 0.0);
+    float c1 = (pow(c1Dot, 50.0) + pow(c1Dot, 200.0) * 0.5) * (0.8 + 0.2 * sin(t * 20.0));
+    col += vec3(1.0, 0.6, 0.1) * c1 * 2.0;
+    
+    vec3 comet2Dir = normalize(vec3(sin(t * 0.2 + 2.0), 0.3, cos(t * 0.15)));
+    float c2Dot = max(dot(dir, comet2Dir), 0.0);
+    float c2 = (pow(c2Dot, 50.0) + pow(c2Dot, 200.0) * 0.5) * (0.8 + 0.2 * sin((t + 1.0) * 20.0));
+    col += vec3(1.0, 0.4, 0.05) * c2 * 1.5;
+    
+    vec3 comet3Dir = normalize(vec3(-sin(t * 0.25 + 1.0), 0.5, -cos(t * 0.2 + 0.5)));
+    float c3Dot = max(dot(dir, comet3Dir), 0.0);
+    float c3 = (pow(c3Dot, 50.0) + pow(c3Dot, 200.0) * 0.5) * (0.8 + 0.2 * sin((t + 2.0) * 20.0));
+    col += vec3(1.0, 0.5, 0.15) * c3 * 1.8;
+    
+    vec3 comet4Dir = normalize(vec3(sin(t * 0.18), 0.6 + 0.2 * sin(t * 0.5), cos(t * 0.22)));
+    float c4Dot = max(dot(dir, comet4Dir), 0.0);
+    float c4 = (pow(c4Dot, 50.0) + pow(c4Dot, 200.0) * 0.5) * (0.8 + 0.2 * sin((t + 3.0) * 20.0));
+    col += vec3(0.9, 0.3, 0.05) * c4 * 2.0;
+    
+    // Fiery sun/hellmouth glow
+    col += vec3(1.0, 0.4, 0.1) * 0.3 * pow(sundot, 2.0);
+    col += vec3(1.0, 0.6, 0.2) * 0.5 * pow(sundot, 8.0);
+    col += vec3(1.0, 0.8, 0.3) * pow(sundot, 64.0);
+    
+    // Burning horizon
+    col = mix(col, horizonCol, pow(1.0 - max(dir.y + 0.1, 0.0), 4.0));
+}
+
+// Hellish head glow bloom
+float glowIntensity = 0.35 / (1.0 + minGlow * minGlow * 0.5);
+col += vec3(1.0, 0.3, 0.1) * glowIntensity * 0.15;
+
+// Contrast enhancement
+col = clamp(col, 0.0, 1.0);
+col = col * col * (3.0 - 2.0 * col);
+
+// Slight saturation boost
+float sat = 0.15;
+col = col * (1.0 + sat) - sat * dot(col, vec3(0.33));
+
+// Vignette
+col *= 1.0 - 0.25 * dot(pos4.xy, pos4.xy);
+
+// Tone mapping
+col = pow(col / (1.0 + col * 0.5), vec3(0.95));
+
+color = vec4(col, 1.0);
+`,``,`
+uniform vec3 uhip1; uniform vec3 ujr1; uniform vec3 ujr2; uniform vec3 ujr3;
+uniform vec3 uhip2; uniform vec3 ujl1; uniform vec3 ujl2; uniform vec3 ujl3;
+uniform vec3 uChestPos; uniform vec3 uHeadPos; uniform float uLift; uniform vec3 uBodyAngle;
+`);const boxObstacles=[{x:-3,z:15,sx:1,sy:1,sz:1},{x:2.5,z:25,sx:.75,sy:.75,sz:.75},{x:-1.5,z:40,sx:1.2,sy:1.2,sz:.8},{x:3.5,z:55,sx:.9,sy:.9,sz:1.1},{x:-4,z:70,sx:1.5,sy:1.5,sz:1},{x:1,z:85,sx:.8,sy:.8,sz:.8},{x:-2.5,z:100,sx:1.1,sy:1.1,sz:.9},{x:4,z:115,sx:1.3,sy:1,sz:1.2},{x:.5,z:130,sx:.7,sy:.7,sz:.7},{x:-3.5,z:140,sx:1,sy:1,sz:1}],floorBeams=[{x:0,z:10,width:2.5},{x:-1,z:35,width:3.5},{x:1.5,z:52,width:3},{x:0,z:68,width:4.5},{x:-.5,z:82,width:3.5},{x:.5,z:98,width:4},{x:-1,z:112,width:3},{x:0,z:125,width:5}],barPositions=[{z:30,speed:1.5,offset:0},{z:60,speed:-2,offset:0},{z:90,speed:1.2,offset:Math.PI/2},{z:120,speed:-1.8,offset:Math.PI/4}],holePositions=[{x:2.5,z:45,radius:3},{x:-2,z:75,radius:2.5},{x:1.5,z:105,radius:2}];function de(p){let terrainY=getTerrainHeight(p[0],p[2]),ground=Math.max(p[1]-terrainY,-deHoles(p));return Math.min(ground,Math.min(deSpinningBars(p),Math.min(deBoxes(p),deFloorBeams(p))))}function deSpinningBars(p){let d=1/0;for(let bar of barPositions){let h=getTerrainHeight(0,bar.z)+1.5,angle=t*bar.speed+bar.offset,rotated=rotY(plus(p,[0,-h,-bar.z]),angle);d=Math.min(d,Math.min(sdCapsule3D(rotated,[-4,0,0],[4,0,0],.3),sdCylinder3D(rotated,3,.2)))}return d}function deBoxes(p){let d=1/0;for(let box of boxObstacles){let h=getTerrainHeight(box.x,box.z)+box.sy;d=Math.min(d,sdBox3D(rotX(plus(p,[-box.x,-h,-box.z]),.29),[box.sx,box.sy,box.sz]))}return d}function deFloorBeams(p){let d=1/0;for(let beam of floorBeams){let h=getTerrainHeight(beam.x,beam.z)+.15;d=Math.min(d,sdBox3D(rotX(plus(p,[-beam.x,-h,-beam.z]),.29),[beam.width,.15,.3]))}return d}function sdBox3D(p,b){let q=[Math.abs(p[0])-b[0],Math.abs(p[1])-b[1],Math.abs(p[2])-b[2]];return len([Math.max(q[0],0),Math.max(q[1],0),Math.max(q[2],0)])+Math.min(Math.max(q[0],Math.max(q[1],q[2])),0)}function deHoles(p){let d=1/0;for(let hole of holePositions){let h=getTerrainHeight(hole.x,hole.z)-5,dist2D=Math.sqrt((p[0]-hole.x)**2+(p[2]-hole.z)**2)-hole.radius;p[1]<h+7&&(d=Math.min(d,Math.max(dist2D,-(p[1]-h))))}return d}function sdCapsule3D(p,a,b,r){let pa=plus(p,times(a,-1)),ba=plus(b,times(a,-1));return len(plus(pa,times(ba,-clamp(dot(pa,ba)/dot(ba,ba),0,1))))-r}function sdCylinder3D(p,h,r){let d=[len([p[0],p[2]])-r,Math.abs(p[1])-h];return Math.min(Math.max(d[0],d[1]),0)+len([Math.max(d[0],0),Math.max(d[1],0)])}function getSpinningBarForce(p){for(let bar of barPositions){let h=getTerrainHeight(0,bar.z)+1.5,angle=t*bar.speed+bar.offset;if(sdCapsule3D(rotY(plus(p,[0,-h,-bar.z]),angle),[-4,0,0],[4,0,0],.3)<1){let tangent=rotY([0,0,1],angle+Math.PI/2);return{hit:!0,force:[tangent[0]*bar.speed*15,10,tangent[2]*bar.speed*15]}}}return{hit:!1,force:[0,0,0]}}function isOverHole(x,z){for(let hole of holePositions)if(Math.sqrt((x-hole.x)**2+(z-hole.z)**2)<hole.radius)return!0;return!1}function getHoleInfo(x,z){for(let hole of holePositions)if(Math.sqrt((x-hole.x)**2+(z-hole.z)**2)<hole.radius*1.5)return hole;return null}</script><script>let mouseDown=[],keyDown=[],keyPressed=[];document.onmousemove=e=>{document.pointerLockElement&&(player.angle[0]+=e.movementX/700,player.angle[1]=clamp(player.angle[1]-e.movementY/700,-Math.PI/2.5,Math.PI/2.5))},document.onmousedown=e=>mouseDown[e.button]=!0,document.onmouseup=e=>mouseDown[e.button]=!1,document.onkeydown=e=>{keyDown[e.key.toLowerCase()]=keyPressed[e.key.toLowerCase()]=!0},document.onkeyup=e=>keyDown[e.key.toLowerCase()]=!1;function lerpAngle(a,b,w){return a%=2*Math.PI,b%=2*Math.PI,Math.abs(b-a)>=Math.PI&&(a+=Math.sign(b-a)*2*Math.PI),lerp(a,b,w)}function Player(){this.pos=[0,2,-10],this.camPos=[0,0,0],this.angle=[0,0],this.bodyAngle=[0,0],this.velocity=[0,0,0],this.body2=.5,this.gravity=40,this.jumpVel=12,this.speed=5,this.pushSpeed=3,this.isPushing=!1,this.pushCooldown=0,this.coyoteTime=0,this.update=()=>{this.checkSpinningBars(),this.move(),this.push(),this.legAnimator&&this.legAnimator.update(),this.updateUniforms()},this.checkSpinningBars=()=>{let result=getSpinningBarForce(this.pos);result.hit&&(this.velocity=plus(this.velocity,result.force),showMessage(`Knocked off!`,1500))},this.move=()=>{let vel=[0,0,0],moveSpeed=this.isPushing?this.pushSpeed:this.speed,ca=Math.cos(this.angle[0]),sa=Math.sin(this.angle[0]);keyDown.w&&(vel[2]+=ca,vel[0]+=sa),keyDown.s&&(vel[2]-=ca,vel[0]-=sa),keyDown.a&&(vel[2]+=sa,vel[0]-=ca),keyDown.d&&(vel[2]-=sa,vel[0]+=ca),len(vel)>0&&(this.bodyAngle[0]=lerpAngle(this.bodyAngle[0],Math.atan2(vel[0],vel[2]),.1),renderer.setUni(`playerAngle`,[this.bodyAngle[0],0])),this.legAnimator&&(this.onGround()?this.legAnimator.setState(len(vel)>0?0:1,len(vel)>0?.1:.2):this.legAnimator.setState(this.velocity[1]>5?2:3,this.velocity[1]>5?.1:1)),len(vel)>0&&(vel=times(normalize(vel),moveSpeed*dt)),this.coyoteTime-=dt,this.onGround()&&(this.coyoteTime=.15,this.velocity[0]*=.9,this.velocity[2]*=.9),keyPressed[` `]&&this.coyoteTime>0&&(this.velocity[1]=this.jumpVel,this.coyoteTime=-1),this.velocity[1]-=this.gravity*dt,this.pos=plus(plus(this.pos,times(this.velocity,dt)),vel);let overHole=isOverHole(this.pos[0],this.pos[2]),terrainY=getTerrainHeight(this.pos[0],this.pos[2]),groundLevel=terrainY+this.body2;if(!overHole&&this.pos[1]<groundLevel&&(this.pos[1]=groundLevel,this.velocity[1]<0&&(this.velocity[1]=0)),overHole){let holeInfo=getHoleInfo(this.pos[0],this.pos[2]);holeInfo&&(this.velocity[0]+=(holeInfo.x-this.pos[0])*3*dt,this.velocity[2]+=(holeInfo.z-this.pos[2])*3*dt)}let barDist=deSpinningBars(this.pos);barDist<this.body2&&(this.pos=plus(this.pos,times(deNormal(this.pos),this.body2-barDist))),this.handleCollision(deBoxes,this.body2,!1),deFloorBeams(this.pos)<this.body2&&(this.pos[1]=Math.max(this.pos[1],getTerrainHeight(this.pos[0],this.pos[2])+.3+this.body2));let toBoulder=plus(this.pos,times(boulder.pos,-1)),distToBoulder=len(toBoulder),minDist=this.body2+boulder.size;if(distToBoulder<minDist&&distToBoulder>.01){let pushDir=normalize(toBoulder);this.pos=plus(this.pos,times(pushDir,minDist-distToBoulder));let velIntoBoulder=dot(this.velocity,times(pushDir,-1));velIntoBoulder>0&&(this.velocity=plus(this.velocity,times(pushDir,velIntoBoulder)))}Math.abs(this.pos[0])>6.5&&(this.pos[0]=Math.sign(this.pos[0])*6.5,this.velocity[0]*=-.5),this.pos[1]<terrainY-8&&triggerRestart(`Fell into the abyss!`)},this.handleCollision=(deFn,radius,bounce)=>{let dist=deFn(this.pos);if(dist<radius){let eps=.05,norm=normalize([deFn(plus(this.pos,[eps,0,0]))-deFn(plus(this.pos,[-eps,0,0])),deFn(plus(this.pos,[0,eps,0]))-deFn(plus(this.pos,[0,-eps,0])),deFn(plus(this.pos,[0,0,eps]))-deFn(plus(this.pos,[0,0,-eps]))]);this.pos=plus(this.pos,times(norm,radius-dist+(bounce?.1:0)));let velDot=dot(this.velocity,norm);velDot<0&&(this.velocity=plus(this.velocity,times(norm,-velDot*(bounce?1.5:1))))}},this.push=()=>{this.pushCooldown-=dt;let toBoulder=plus(boulder.pos,times(this.pos,-1)),distToBoulder=len(toBoulder),moveDir=dirFromAngle(this.angle[0],0),dotProduct=dot(normalize(toBoulder),moveDir),minDist=this.body2+boulder.size;distToBoulder<3.5&&distToBoulder>minDist-.5&&dotProduct>.3&&keyDown.w&&this.onGround()&&this.pushCooldown<=0?(this.isPushing=!0,boulder.applyPush(times(normalize([toBoulder[0],0,toBoulder[2]]),2)),renderer.setUni(`uBodyAngle`,[0,.3,0])):(this.isPushing=!1,renderer.setUni(`uBodyAngle`,[0,0,0])),renderer.setUni(`isPushing`,this.isPushing?1:0)},this.onGround=()=>isOverHole(this.pos[0],this.pos[2])?!1:this.pos[1]<=getTerrainHeight(this.pos[0],this.pos[2])+this.body2+.1,this.updateUniforms=()=>{renderer.setUni(`playerPos`,this.pos),renderer.setUni(`camAngle`,this.angle);let camDir=rotY(rotX([0,0,-6],-this.angle[1]),this.angle[0]),camPos=plus(plus(this.pos,[0,1.5,0]),camDir),iterations=50;for(;de(camPos)<.8&&iterations-- >0;)camPos=plus(camPos,times(normalize(camDir),-.1));renderer.setUni(`camPos`,camPos),this.camPos=camPos},this.reset=z=>{this.pos=[0,getTerrainHeight(0,z)+2,z],this.velocity=[0,0,0],this.isPushing=!1},this.createAnimators=()=>{let legUnis=[`uhip1`,`ujr1`,`ujr2`,`ujr3`,`uhip2`,`ujl1`,`ujl2`,`ujl3`,`uHeadPos`,`uChestPos`,`uBodyAngle`],frames={walk1:[[.1,-.1,-.12],[.15,-.2,.15],[.13,-.35,0],[.13,-.46,.15],[-.1,-.1,-.12],[-.15,-.28,-.05],[-.13,-.3,-.2],[-.13,-.46,-.15],[0,0,0],[0,0,0],[0,-.3,0],1.2],idle:[[.1,-.1,-.12],[.15,-.26,.05],[.13,-.35,-.15],[.13,-.46,0],[-.1,-.1,-.12],[-.15,-.26,.05],[-.13,-.35,-.15],[-.13,-.46,0],[0,0,0],[0,0,0],[0,0,0],1.2],jump:[[.1,-.1,-.12],[.15,-.18,.05],[.13,-.25,-.15],[.13,-.35,0],[-.1,-.1,-.12],[-.15,-.18,.05],[-.13,-.25,-.15],[-.13,-.35,0],[0,0,0],[0,0,0],[0,-.2,0],1.2],fall:[[.1,-.1,-.12],[.15,-.13,.05],[.13,-.2,-.15],[.13,-.3,0],[-.1,-.1,-.12],[-.15,-.13,.05],[-.13,-.2,-.15],[-.13,-.3,0],[0,0,0],[0,0,0],[0,-.2,0],1.2],walk2:[[.1,-.1,-.12],[.15,-.28,-.05],[.13,-.3,-.2],[.13,-.46,-.15],[-.1,-.1,-.12],[-.15,-.2,.15],[-.13,-.35,0],[-.13,-.46,.15],[0,0,0],[0,0,0],[0,-.3,0],1.2]};for(let i in legUnis)renderer.addUniform(legUnis[i],`vec3`,frames.idle[i]);renderer.addUniform(`uLift`,`float`,1.2),this.legAnimator=new Animator([...legUnis,`uLift`],sinLerp);let stepTime=.3;this.legAnimator.addKeyFrame(frames.walk1,0,0),this.legAnimator.addKeyFrame(frames.walk2,stepTime/2,0),this.legAnimator.addKeyFrame(frames.walk1,stepTime,0),this.legAnimator.addKeyFrame(frames.idle,0,1),this.legAnimator.addKeyFrame(frames.jump,0,2),this.legAnimator.addKeyFrame(frames.fall,0,3)},this.createAnimators()}let player=new Player;</script><script>function Boulder(){this.pos=[0,5,0],this.size=2.5,this.gravity=25,this.velocity=[0,0,0],this.rotVel=0,this.rotAxis=[0,0,1],this.rotMat=I(),this.friction=.98,this.groundFriction=.995,this.slopeGravity=12,this.beingPushed=!1,this.pushForce=[0,0,0],this.maxHeight=0,this.update=()=>{this.beingPushed=len(this.pushForce)>.1,this.beingPushed&&(this.velocity=plus(this.velocity,times(this.pushForce,dt)),this.pushForce=times(this.pushForce,.9)),this.checkBarCollision(),this.checkHoles();let groundY=getTerrainHeight(this.pos[0],this.pos[2])+this.size;if(this.pos[1]<=groundY+.1){this.pos[1]=groundY,this.velocity[1]<-5?this.velocity[1]*=-.3:this.velocity[1]=0,this.velocity[0]*=this.groundFriction,this.velocity[2]*=this.groundFriction,!this.beingPushed&&this.pos[2]>0&&(this.velocity[2]-=this.slopeGravity*.3*dt,this.velocity[0]+=(Math.random()-.5)*.5*dt);let groundSpeed=len([this.velocity[0],this.velocity[2]]);groundSpeed>.1&&(this.rotVel=groundSpeed/this.size,this.rotAxis=normalize(cross([this.velocity[0],0,this.velocity[2]],[0,1,0])))}else this.velocity[1]-=this.gravity*dt;this.velocity=times(this.velocity,this.friction),this.pos=plus(this.pos,times(this.velocity,dt)),this.handleCollision(deBoxes,.1,1.5),this.handleCollision(deFloorBeams,.05,0,()=>{this.velocity[1]+=2,this.velocity[2]*=.9}),Math.abs(this.pos[0])>5.5&&(this.pos[0]=Math.sign(this.pos[0])*5.5,this.velocity[0]*=-.5),this.pos[2]<-5&&(this.pos[2]=-5,this.velocity[2]=0),len(this.rotAxis)>0&&(this.rotMat=matTimesMat(rotAxisMat(this.rotVel*dt,this.rotAxis),this.rotMat)),this.pos[2]>this.maxHeight&&(this.maxHeight=this.pos[2]),this.pos[2]<this.maxHeight-30&&this.maxHeight>10&&triggerRestart(`The boulder escaped!`),this.updateUniforms()},this.handleCollision=(deFn,pushExtra,bounceMult,callback)=>{let dist=deFn(this.pos);if(dist<this.size){let eps=.1,norm=normalize([deFn(plus(this.pos,[eps,0,0]))-deFn(plus(this.pos,[-eps,0,0])),deFn(plus(this.pos,[0,eps,0]))-deFn(plus(this.pos,[0,-eps,0])),deFn(plus(this.pos,[0,0,eps]))-deFn(plus(this.pos,[0,0,-eps]))]);if(this.pos=plus(this.pos,times(norm,this.size-dist+pushExtra)),bounceMult){let velDot=dot(this.velocity,norm);velDot<0&&(this.velocity=plus(this.velocity,times(norm,-velDot*bounceMult)))}callback&&callback()}},this.checkBarCollision=()=>{let result=getSpinningBarForce(this.pos);result.hit&&(this.velocity=plus(this.velocity,times(result.force,.5)),this.velocity[1]+=5)},this.checkHoles=()=>{for(let hole of[{x:2.5,z:45,radius:3},{x:-2,z:75,radius:2.5},{x:1.5,z:105,radius:2}]){let dx=this.pos[0]-hole.x,dz=this.pos[2]-hole.z,dist=Math.sqrt(dx*dx+dz*dz);if(dist<hole.radius+this.size*.5){let pullStrength=5*(1-dist/(hole.radius+this.size));this.velocity[0]-=dx/dist*pullStrength*dt,this.velocity[2]-=dz/dist*pullStrength*dt,dist<hole.radius*.5&&triggerRestart(`The boulder fell into a pit!`)}}},this.applyPush=force=>{this.pushForce=plus(this.pushForce,force)},this.updateUniforms=()=>{renderer.setUni(`boulderPos`,this.pos),renderer.setUni(`boulderRotMat`,this.rotMat)},this.reset=z=>{this.pos=[0,getTerrainHeight(0,z)+this.size+1,z+3],this.velocity=[0,0,0],this.rotMat=I(),this.rotVel=0,this.maxHeight=z,this.pushForce=[0,0,0]},this.de=p=>len(plus(p,times(this.pos,-1)))-this.size}let boulder=new Boulder;</script><script>renderer.addUniform(`res`,`vec2`,[getViewportSize().width,getViewportSize().height]),renderer.addUniform(`camPos`,`vec3`,[0,5,-10]),renderer.addUniform(`camAngle`,`vec2`,[0,0]),renderer.addUniform(`t`,`float`,0),renderer.addUniform(`boulderPos`,`vec3`,[0,5,3]),renderer.addUniform(`playerPos`,`vec3`,[0,2,0]),renderer.addUniform(`playerAngle`,`vec2`,[0,0]),renderer.addUniform(`boulderRotMat`,`mat3`,I()),renderer.addUniform(`isPushing`,`float`,0),renderer.addUniform(`gameState`,`float`,0);let t=performance.now()/1e3,dt=1/60,gameStarted=!1,restartPending=!1,restartMessage=``,messageTimeout=null;const $=id=>document.getElementById(id),titleScreen=$(`title-screen`),instructions=$(`instructions`),progressEl=$(`progress`),messageEl=$(`message`),resetBtn=$(`reset-btn`),mobileControls=$(`mobile-controls`),mobileInstructions=$(`mobile-instructions`),joystickZone=$(`joystick-zone`),joystickKnob=$(`joystick-knob`),lookZone=$(`look-zone`),jumpBtn=$(`jump-btn`),isMobile=`ontouchstart`in window||navigator.maxTouchPoints>0||window.innerWidth<=768;titleScreen.onclick=()=>{titleScreen.classList.add(`hidden`),[progressEl,instructions,resetBtn].forEach(el=>el.classList.remove(`hidden`)),isMobile&&[mobileControls,mobileInstructions,lookZone].forEach(el=>el.classList.remove(`hidden`)),gameStarted=!0,player.reset(-10),boulder.reset(-10),isMobile||renderer.canvas.requestPointerLock()};function fullReset(){restartPending=!1,player.reset(-10),boulder.reset(-10),boulder.maxHeight=0,showMessage(`Reset!`,1500)}resetBtn.onclick=e=>{e.stopPropagation(),fullReset(),isMobile||renderer.canvas.requestPointerLock()};function showMessage(msg,duration=2e3){messageEl.textContent=msg,messageEl.classList.add(`show`),messageTimeout&&clearTimeout(messageTimeout),messageTimeout=setTimeout(()=>messageEl.classList.remove(`show`),duration)}function triggerRestart(reason){restartPending||(restartPending=!0,restartMessage=reason,showMessage(reason+` Walk back to the bottom to restart.`,5e3),boulder.reset(-5))}function checkRestart(){restartPending&&player.pos[2]<0&&(restartPending=!1,showMessage(`Begin again...`,2e3),boulder.reset(-5),boulder.maxHeight=0)}function checkVictory(){boulder.pos[2]>=150&&(showMessage(`Victory! But the boulder rolls back...`,4e3),setTimeout(()=>{boulder.reset(-5),player.reset(-10),boulder.maxHeight=0},4e3))}function updateUI(){progressEl.textContent=`Height: ${Math.max(0,Math.floor(boulder.pos[2]*.3))}m (Best: ${Math.max(0,Math.floor(boulder.maxHeight*.3))}m)`}function update(){try{let now=performance.now()/1e3;dt=Math.min(now-t,1/20),t=now,gameStarted&&(player.update(),boulder.update(),checkRestart(),checkVictory(),updateUI()),renderer.setUni(`t`,t),renderer.draw(),keyPressed=[]}catch(e){console.error(e)}requestAnimationFrame(update)}function handleResize(){let size=getViewportSize();renderer.canvas.width=size.width,renderer.canvas.height=size.height,renderer.gl.viewport(0,0,size.width,size.height),renderer.setUni(`res`,[size.width,size.height])}window.onresize=handleResize,window.visualViewport&&(window.visualViewport.onresize=handleResize),document.addEventListener(`pointerlockchange`,()=>{!document.pointerLockElement&&gameStarted&&!isMobile&&showMessage(`Click to resume`,1e3)}),document.addEventListener(`keydown`,e=>{e.key.toLowerCase()===`r`&&gameStarted&&fullReset()});
+// Mobile controls
+let joystickActive=!1,joystickTouchId=null,joystickCenter={x:0,y:0},joystickInput={x:0,y:0},lookActive=!1,lookTouchId=null,lookStart={x:0,y:0};function getTouchById(touches,id){for(let i=0;i<touches.length;i++)if(touches[i].identifier===id)return touches[i];return null}if(joystickZone){joystickZone.addEventListener(`touchstart`,e=>{if(e.preventDefault(),joystickTouchId===null){joystickTouchId=e.changedTouches[0].identifier,joystickActive=!0;let rect=joystickZone.getBoundingClientRect();joystickCenter={x:rect.left+rect.width/2,y:rect.top+rect.height/2}}},{passive:!1}),joystickZone.addEventListener(`touchmove`,e=>{e.preventDefault();let touch=getTouchById(e.touches,joystickTouchId);if(touch&&joystickActive){let dx=touch.clientX-joystickCenter.x,dy=touch.clientY-joystickCenter.y,maxDist=50,dist=Math.min(Math.sqrt(dx*dx+dy*dy),50),angle=Math.atan2(dy,dx);joystickInput={x:dist/50*Math.cos(angle),y:dist/50*Math.sin(angle)},joystickKnob.style.left=`calc(50% + ${joystickInput.x*50}px)`,joystickKnob.style.top=`calc(50% + ${joystickInput.y*50}px)`,keyDown.w=joystickInput.y<-.3,keyDown.s=joystickInput.y>.3,keyDown.a=joystickInput.x<-.3,keyDown.d=joystickInput.x>.3}},{passive:!1});let joystickEnd=e=>{getTouchById(e.changedTouches,joystickTouchId)&&(joystickActive=!1,joystickTouchId=null,joystickInput={x:0,y:0},joystickKnob.style.left=`50%`,joystickKnob.style.top=`50%`,keyDown.w=keyDown.s=keyDown.a=keyDown.d=!1)};joystickZone.addEventListener(`touchend`,joystickEnd,{passive:!1}),joystickZone.addEventListener(`touchcancel`,joystickEnd,{passive:!1})}if(lookZone){lookZone.addEventListener(`touchstart`,e=>{if(e.preventDefault(),lookTouchId===null){let touch=e.changedTouches[0];lookTouchId=touch.identifier,lookActive=!0,lookStart={x:touch.clientX,y:touch.clientY}}},{passive:!1}),lookZone.addEventListener(`touchmove`,e=>{e.preventDefault();let touch=getTouchById(e.touches,lookTouchId);if(touch&&lookActive&&gameStarted){let sens=.004;player.angle[0]+=(touch.clientX-lookStart.x)*sens,player.angle[1]=clamp(player.angle[1]-(touch.clientY-lookStart.y)*sens,-Math.PI/2.5,Math.PI/2.5),lookStart={x:touch.clientX,y:touch.clientY}}},{passive:!1});let lookEnd=e=>{getTouchById(e.changedTouches,lookTouchId)&&(lookActive=!1,lookTouchId=null)};lookZone.addEventListener(`touchend`,lookEnd,{passive:!1}),lookZone.addEventListener(`touchcancel`,lookEnd,{passive:!1})}jumpBtn&&(jumpBtn.addEventListener(`touchstart`,e=>{e.preventDefault(),e.stopPropagation(),jumpBtn.classList.add(`active`),keyPressed[` `]=keyDown[` `]=!0},{passive:!1}),jumpBtn.addEventListener(`touchend`,e=>{e.preventDefault(),jumpBtn.classList.remove(`active`),keyDown[` `]=!1},{passive:!1}),jumpBtn.addEventListener(`touchcancel`,()=>{jumpBtn.classList.remove(`active`),keyDown[` `]=!1})),renderer.canvas.addEventListener(`touchstart`,e=>e.preventDefault(),{passive:!1}),renderer.canvas.addEventListener(`touchmove`,e=>e.preventDefault(),{passive:!1}),renderer.draw(),update(),console.log(`
+╔═══════════════════════════════════════╗
+║           SISYPHUS                    ║
+║  WASD - Move | SPACE - Jump | R - Reset║
+║  One must imagine Sisyphus happy.     ║
+╚═══════════════════════════════════════╝
+`);</script><script>`serviceWorker`in navigator&&navigator.serviceWorker.register(`sw.js`);const wifiBtn=document.getElementById(`wifi-btn`),bgMusic=document.getElementById(`bg-music`),ts=document.getElementById(`title-screen`),oldStart=ts.onclick;ts.onclick=e=>{oldStart&&oldStart(e),wifiBtn.classList.remove(`hidden`)},wifiBtn.onclick=e=>{e.stopPropagation(),wifiBtn.classList.toggle(`active`),wifiBtn.classList.contains(`active`)?bgMusic.play().catch(console.error):bgMusic.pause()};</script>
