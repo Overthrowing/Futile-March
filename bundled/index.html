@@ -5,116 +5,191 @@
 <title>Futile March - Game Bundle</title>
 <style>
     body {
-        color: #eee;
-        background: #111;
-        max-width: 800px;
+        color: #e0e0e0;
+        background: #0a0a0a;
+        max-width: 900px;
         margin: 0 auto;
-        padding: 20px;
-        font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-        line-height: 1.6
+        padding: 40px 20px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        line-height: 1.6;
     }
 
     h1 {
         text-align: center;
         color: #fff;
-        margin-bottom: 40px
+        margin-bottom: 60px;
+        font-weight: 800;
+        letter-spacing: -1px;
+        font-size: 2.5rem;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 24px;
     }
 
     .card {
-        background: #222;
+        background: #1a1a1a;
         border: 1px solid #333;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        padding: 20px;
-        transition: transform .2s
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all .3s ease;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
     }
 
     .card:hover {
         border-color: #555;
-        transform: translateY(-2px)
+        transform: translateY(-4px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-image {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        background: #2a2a2a;
+        border-bottom: 1px solid #333;
+    }
+
+    .card-content {
+        padding: 20px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
     }
 
     .winner {
-        background: #2a2500;
-        border: 2px solid gold
+        border: 2px solid #ffd700;
+        background: linear-gradient(to bottom, #1a1a00, #1a1a1a);
     }
 
     .winner h2 {
-        color: gold
+        color: #ffd700;
     }
 
     .tag {
         color: #000;
         vertical-align: middle;
-        background: gold;
+        background: #ffd700;
         border-radius: 4px;
-        margin-left: 10px;
+        margin-left: 8px;
         padding: 2px 8px;
-        font-size: .8em;
-        font-weight: 700;
-        display: inline-block
+        font-size: 0.7em;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: inline-block;
+        transform: translateY(-2px);
+    }
+
+    .tag.experiment {
+        background: #444;
+        color: #ccc;
+        border: 1px solid #555;
     }
 
     h2 {
+        margin: 0 0 10px 0;
+        font-size: 1.5rem;
+        display: flex;
         align-items: center;
-        margin-top: 0;
-        display: flex
+        flex-wrap: wrap;
     }
 
     a {
         color: inherit;
         text-decoration: none;
-        display: block
+        display: block;
+        height: 100%;
     }
 
     .meta {
-        color: #888;
-        margin-top: 10px;
-        font-family: monospace;
-        font-size: .9em
+        color: #666;
+        margin-top: auto;
+        padding-top: 16px;
+        font-family: "SF Mono", "Monaco", "Inconsolata", "Fira Mono", "Droid Sans Mono", "Source Code Pro", monospace;
+        font-size: 0.85em;
+        display: flex;
+        align-items: center;
+        gap: 6px;
     }
 
     .desc {
-        color: #ccc;
-        margin-top: 10px
+        color: #aaa;
+        font-size: 0.95rem;
+        margin-bottom: 16px;
     }
 </style>
 
 <body>
-    <h1>Futile March Collection</h1><a href=sisyphus.html>
-        <div class="card winner">
-            <h2>Sisyphus <span class=tag>WINNER</span></h2>
-            <div class=desc>The main Sisyphus game. Sisyphus is a 3D browser raymarching-based game inspired by the myth
-                of Sisyphus. The goal is simple yet futile: push the boulder up the mountain. All of this without any
-                assets in under 15 kB including physics, textures through fragment shaders, PWA support, cross platform
-                controls, and extensible dynamic javascript modules.
+    <h1>Futile March Collection</h1>
 
-                Resources
+    <div class="grid">
+        <a href="sisyphus.html">
+            <div class="card winner">
+                <img src="static/sisyphus.jpeg" class="card-image" alt="Sisyphus Game">
+                <div class="card-content">
+                    <h2>Sisyphus <span class="tag">WINNER</span></h2>
+                    <div class="desc">A 3D browser raymarching-based game inspired by the myth of Sisyphus. Push the
+                        boulder up the mountain. No assets, under 15 kB (Compressed).</div>
+                    <div class="meta">📦 15 kB<hr> Futile March Team</div>
+                </div>
             </div>
-            <div class=meta>📦 15 kB (Compressed)</div>
-        </div>
-    </a><a href=sites/flyer.html>
-        <div class=card>
-            <h2>Flyer</h2>
-            <div class=desc>Aayan's Tower avoiding game</div>
-            <div class=meta>📦 5 kB</div>
-        </div>
-    </a><a href=sites/flyer2.html>
-        <div class=card>
-            <h2>Flyer2</h2>
-            <div class=desc>Etash's flight sim</div>
-            <div class=meta>📦 7 kB</div>
-        </div>
-    </a><a href=sites/lsd.html>
-        <div class=card>
-            <h2>Lsd</h2>
-            <div class=desc>Sid's visual experiment</div>
-            <div class=meta>📦 2 kB</div>
-        </div>
-    </a><a href=sites/seascape.html>
-        <div class=card>
-            <h2>Seascape</h2>
-            <div class=desc>Nathan's shader experiment</div>
-            <div class=meta>📦 7 kB</div>
-        </div>
-    </a>
+        </a>
+
+        <a href="sites/fractal_flyer.html">
+            <div class="card">
+                <img src="static/fractal_flyer.jpeg" class="card-image" alt="Fractal Flyer">
+                <div class="card-content">
+                    <h2>Fractal Flyer <span class="tag experiment">EXPERIMENT</span></h2>
+                    <div class="desc">Tests real-time rendering of infinite fractal structures using Signed Distance Functions (SDFs) and raymarching.</div>
+                    <div class="meta">📦 2 kB <hr> Siddharth R</div>
+                </div>
+            </div>
+        </a>
+
+        <a href="sites/flyer.html">
+            <div class="card">
+                <img src="static/neon.jpeg" class="card-image" alt="Neon Racer">
+                <div class="card-content">
+                    <h2>Neon Racer <span class="tag experiment">EXPERIMENT</span></h2>
+                    <div class="desc">Tests hybrid rendering techniques combining raymarching for the player ship with standard polygon rasterization for the environment.</div>
+                    <div class="meta">📦 5 kB <hr> Aayan M</div>
+                </div>
+            </div>
+        </a>
+
+        
+
+        <a href="sites/seascape.html">
+            <div class="card">
+                <img src="static/ocean.jpeg" class="card-image" alt="Seascape">
+                <div class="card-content">
+                    <h2>Seascape <span class="tag experiment">EXPERIMENT</span></h2>
+                    <div class="desc">Tests advanced procedural water generation using heightmap tracing and volumetric fog.</div>
+                    <div class="meta">📦 7 kB <hr> Nathan Ye</div>
+                </div>
+            </div>
+        </a>
+
+        <a href="sites/flyer2.html">
+            <div class="card">
+                <img src="static/terrain.jpeg" class="card-image" alt="Mountain Glide">
+                <div class="card-content">
+                    <h2>Mountain Glide <span class="tag experiment">EXPERIMENT</span></h2>
+                    <div class="desc">Tests procedural terrain generation (perlin noise) and collision detection within the context of Signed Distance Functions (SDFs).</div>
+                    <div class="meta">📦 7 kB <hr> Etash J</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div style="text-align: center; margin-top: 40px; color: #666; font-size: 0.9em;">
+        <p>Made by the Futile March Team:</p>
+        <p>Siddharth Radhakrishnan • Etash Jhanji • Aayan Maheshwari • Nathan Ye</p>
+    </div>
+</body>
+
+</html>
