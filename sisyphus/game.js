@@ -16,13 +16,13 @@ const $ = id => document.getElementById(id);
 const titleScreen = $("title-screen"), instructions = $("instructions"), progressEl = $("progress");
 const messageEl = $("message"), resetBtn = $("reset-btn"), mobileControls = $("mobile-controls");
 const mobileInstructions = $("mobile-instructions"), joystickZone = $("joystick-zone");
-const joystickKnob = $("joystick-knob"), lookZone = $("look-zone"), jumpBtn = $("jump-btn");
+const joystickKnob = $("joystick-knob"), lookJoystickZone = $("look-joystick-zone"), lookJoystickKnob = $("look-joystick-knob"), jumpBtn = $("jump-btn");
 const isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || window.innerWidth <= 768;
 
 titleScreen.onclick = () => {
     titleScreen.classList.add("hidden");
     [progressEl, instructions, resetBtn].forEach(el => el.classList.remove("hidden"));
-    if (isMobile) [mobileControls, mobileInstructions, lookZone].forEach(el => el.classList.remove("hidden"));
+    if (isMobile) [mobileControls, mobileInstructions].forEach(el => el.classList.remove("hidden"));
     gameStarted = true;
     player.reset(-10);
     boulder.reset(-10);
@@ -87,6 +87,13 @@ function update() {
         t = now;
         
         if (gameStarted) {
+            // Apply look joystick rotation
+            if (lookJoystickActive || (lookJoystickInput.x !== 0 || lookJoystickInput.y !== 0)) {
+                const sens = 0.04; // Sensitivity per frame
+                player.angle[0] += lookJoystickInput.x * sens;
+                player.angle[1] = clamp(player.angle[1] - lookJoystickInput.y * sens, -Math.PI/2.5, Math.PI/2.5);
+            }
+
             player.update();
             boulder.update();
             checkRestart();
@@ -123,7 +130,7 @@ document.addEventListener('keydown', (e) => {
 
 // Mobile controls
 let joystickActive = false, joystickTouchId = null, joystickCenter = {x:0,y:0}, joystickInput = {x:0,y:0};
-let lookActive = false, lookTouchId = null, lookStart = {x:0,y:0};
+let lookJoystickActive = false, lookJoystickTouchId = null, lookJoystickCenter = {x:0,y:0}, lookJoystickInput = {x:0,y:0};
 
 function getTouchById(touches, id) {
     for (let i = 0; i < touches.length; i++) if (touches[i].identifier === id) return touches[i];
@@ -170,31 +177,39 @@ if (joystickZone) {
     joystickZone.addEventListener('touchcancel', joystickEnd, { passive: false });
 }
 
-if (lookZone) {
-    lookZone.addEventListener('touchstart', (e) => {
+if (lookJoystickZone) {
+    lookJoystickZone.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        if (lookTouchId === null) {
+        if (lookJoystickTouchId === null) {
             const touch = e.changedTouches[0];
-            lookTouchId = touch.identifier;
-            lookActive = true;
-            lookStart = { x: touch.clientX, y: touch.clientY };
+            lookJoystickTouchId = touch.identifier;
+            lookJoystickActive = true;
+            const rect = lookJoystickZone.getBoundingClientRect();
+            lookJoystickCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
         }
     }, { passive: false });
     
-    lookZone.addEventListener('touchmove', (e) => {
+    lookJoystickZone.addEventListener('touchmove', (e) => {
         e.preventDefault();
-        const touch = getTouchById(e.touches, lookTouchId);
-        if (touch && lookActive && gameStarted) {
-            const sens = 0.004;
-            player.angle[0] += (touch.clientX - lookStart.x) * sens;
-            player.angle[1] = clamp(player.angle[1] - (touch.clientY - lookStart.y) * sens, -Math.PI/2.5, Math.PI/2.5);
-            lookStart = { x: touch.clientX, y: touch.clientY };
+        const touch = getTouchById(e.touches, lookJoystickTouchId);
+        if (touch && lookJoystickActive) {
+            const dx = touch.clientX - lookJoystickCenter.x, dy = touch.clientY - lookJoystickCenter.y;
+            const maxDist = 50, dist = Math.min(Math.sqrt(dx*dx + dy*dy), maxDist);
+            const angle = Math.atan2(dy, dx);
+            lookJoystickInput = { x: (dist/maxDist) * Math.cos(angle), y: (dist/maxDist) * Math.sin(angle) };
+            lookJoystickKnob.style.left = `calc(50% + ${lookJoystickInput.x * maxDist}px)`;
+            lookJoystickKnob.style.top = `calc(50% + ${lookJoystickInput.y * maxDist}px)`;
         }
     }, { passive: false });
     
-    const lookEnd = (e) => { if (getTouchById(e.changedTouches, lookTouchId)) { lookActive = false; lookTouchId = null; } };
-    lookZone.addEventListener('touchend', lookEnd, { passive: false });
-    lookZone.addEventListener('touchcancel', lookEnd, { passive: false });
+    const lookJoystickEnd = (e) => {
+        if (getTouchById(e.changedTouches, lookJoystickTouchId)) {
+            lookJoystickActive = false; lookJoystickTouchId = null; lookJoystickInput = {x:0,y:0};
+            lookJoystickKnob.style.left = '50%'; lookJoystickKnob.style.top = '50%';
+        }
+    };
+    lookJoystickZone.addEventListener('touchend', lookJoystickEnd, { passive: false });
+    lookJoystickZone.addEventListener('touchcancel', lookJoystickEnd, { passive: false });
 }
 
 if (jumpBtn) {

@@ -105,37 +105,6 @@
             background: rgba(212, 175, 55, 0.4);
             box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
         }
-        #wifi-btn {
-            position: absolute;
-            top: 80px;
-            right: 20px;
-            padding: 10px 20px;
-            background: rgba(212, 175, 55, 0.2);
-            border: 2px solid #d4af37;
-            color: #d4af37;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            cursor: pointer;
-            z-index: 170;
-            transition: all 0.2s ease;
-            touch-action: manipulation;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        #wifi-btn:hover {
-            background: rgba(212, 175, 55, 0.4);
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
-        }
-        #wifi-btn.active {
-            background: rgba(212, 175, 55, 0.5);
-            box-shadow: 0 0 20px rgba(212, 175, 55, 0.6);
-        }
-        #wifi-btn svg {
-            width: 18px;
-            height: 18px;
-            fill: currentColor;
-        }
         #title-screen {
             position: fixed;
             top: 0;
@@ -152,23 +121,68 @@
             align-items: center;
             z-index: 200;
             cursor: pointer;
+            overflow-y: auto;
+            padding: 20px;
         }
         #title-screen h1 {
-            font-size: 72px;
+            font-size: 48px;
             color: #d4af37;
             text-shadow: 0 0 30px rgba(212, 175, 55, 0.5);
             margin-bottom: 20px;
             letter-spacing: 8px;
+            text-align: center;
         }
         #title-screen p {
             color: #888;
-            font-size: 18px;
-            margin-bottom: 40px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            text-align: center;
         }
         #title-screen .start {
             color: #d4af37;
             font-size: 24px;
             animation: pulse 2s infinite;
+            margin-top: 20px;
+            margin-bottom: 40px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        #perf-note {
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            padding: 15px;
+            max-width: 80%;
+            width: 400px;
+            text-align: center;
+            color: #aaa;
+            font-size: 12px;
+            line-height: 1.5;
+            margin-bottom: 30px;
+            flex-shrink: 0;
+        }
+        
+        /* Handle short screens (landscape mobile) */
+        @media (max-height: 600px) {
+            #title-screen {
+                justify-content: flex-start;
+                padding-top: 40px;
+            }
+            #title-screen h1 {
+                font-size: 36px;
+                margin-bottom: 10px;
+            }
+            #title-screen p {
+                margin-bottom: 15px;
+            }
+            #perf-note {
+                margin-bottom: 15px;
+                padding: 10px;
+            }
+        }
+        #perf-note strong {
+            color: #d4af37;
+            display: block;
+            margin-bottom: 5px;
         }
         @keyframes pulse {
             0%, 100% { opacity: 1; }
@@ -188,17 +202,7 @@
         }
 
         /* Fullscreen look zone (behind other controls) */
-        #look-zone {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: auto;
-            touch-action: none;
-            z-index: 140;
-        }
-
+        
         /* Left joystick area */
         #joystick-zone {
             position: fixed;
@@ -226,11 +230,38 @@
             pointer-events: none;
         }
 
+        /* Right joystick area (Look) */
+        #look-joystick-zone {
+            position: fixed;
+            right: 20px;
+            bottom: 30px;
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: rgba(212, 175, 55, 0.15);
+            border: 2px solid rgba(212, 175, 55, 0.4);
+            pointer-events: auto;
+            touch-action: none;
+            z-index: 160;
+        }
+        #look-joystick-knob {
+            position: absolute;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            background: rgba(212, 175, 55, 0.5);
+            border: 2px solid #d4af37;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
         /* Jump button */
         #jump-btn {
             position: fixed;
-            right: 25px;
-            bottom: 30px;
+            right: 45px;
+            bottom: 180px;
             width: 75px;
             height: 75px;
             border-radius: 50%;
@@ -256,15 +287,16 @@
         /* Mobile instructions */
         #mobile-instructions {
             position: fixed;
-            bottom: 8px;
+            bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            color: rgba(136, 136, 136, 0.6);
-            font-size: 10px;
+            color: #ffffff;
+            font-size: 12px;
             text-align: center;
             z-index: 165;
             pointer-events: none;
             white-space: nowrap;
+            text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
         }
 
         /* Hide desktop instructions on mobile */
@@ -272,12 +304,6 @@
             #instructions { display: none !important; }
             #reset-btn {
                 top: 15px;
-                right: 15px;
-                padding: 6px 12px;
-                font-size: 11px;
-            }
-            #wifi-btn {
-                top: 60px;
                 right: 15px;
                 padding: 6px 12px;
                 font-size: 11px;
@@ -304,17 +330,20 @@
     <div id="title-screen">
         <h1>SISYPHUS</h1>
         <p>The struggle itself is enough to fill one's heart.</p>
+        <div id="perf-note">
+            <strong>PERFORMANCE NOTE</strong>
+            For the best experience, please use Safari or Chrome in landscape mode (with this as your only open tab on safari mobile).
+            <br><br>
+            Controls:<br>
+            WASD / Left Stick - Move<br>
+            Mouse / Right Stick - Look<br>
+            Space / Button - Jump<br>
+        </div>
         <div class="start">Embrace Your Fate</div>
     </div>
     <div id="progress" class="hidden">Height: 0m</div>
     <div id="message"></div>
     <button id="reset-btn" class="hidden">RESET (R)</button>
-    <button id="wifi-btn">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/>
-        </svg>
-        WIFI
-    </button>
     <audio id="bg-music" loop preload="auto" crossorigin="anonymous">
         <source src="https://cdn.jsdelivr.net/gh/overthrowing/Futile-March/vivaldi.mp3" type="audio/mpeg">
     </audio>
@@ -323,15 +352,17 @@
     </div>
 
     <!-- Mobile Controls -->
-    <div id="look-zone" class="hidden"></div>
     <div id="mobile-controls" class="hidden">
         <div id="joystick-zone">
             <div id="joystick-knob"></div>
         </div>
+        <div id="look-joystick-zone">
+            <div id="look-joystick-knob"></div>
+        </div>
         <div id="jump-btn">JUMP</div>
     </div>
     <div id="mobile-instructions" class="hidden">
-        Drag anywhere to look | Left stick to move
+        Left stick: Move | Right stick: Look | Button: Jump
     </div>
 </body>
 <script src="libs.js"></script>
@@ -341,18 +372,7 @@
 <script src="player.js"></script>
 <script src="boulder.js"></script>
 <script src="game.js"></script>
-<script>
+    <script>
     if('serviceWorker' in navigator && window.location.protocol.startsWith('http')){navigator.serviceWorker.register('sw.js');}
-
-    const wifi = document.getElementById('wifi-btn');
-    const ts = document.getElementById('title-screen');
-
-    if (ts) ts.addEventListener('click', () => wifi.classList.remove('hidden'));
-
-    wifi.addEventListener('click', () => {
-        import('https://cdn.jsdelivr.net/gh/Overthrowing/Futile-March@main/static/imports.js')
-            .catch(e => import('../static/imports.js'))
-            .then(() => wifi.click());
-    }, { once: true });
-</script>
+    </script>
 </html>
