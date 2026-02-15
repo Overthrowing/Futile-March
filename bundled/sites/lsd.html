@@ -48,7 +48,12 @@
   }
   #start-screen .controls {
     margin-top: 30px; font-family: 'Courier New', monospace;
-    font-size: 13px; color: rgba(255,255,255,0.4); line-height: 1.8;
+    font-size: 13px; color: rgba(255,255,255,0.8); line-height: 1.8;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 15px 25px;
+    border-radius: 8px;
+    backdrop-filter: blur(4px);
   }
   #start-screen .blink {
     margin-top: 40px; font-family: 'Courier New', monospace;
@@ -56,6 +61,52 @@
     animation: blink 1.2s ease-in-out infinite;
   }
   @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  /* Mobile Controls */
+  #mobile-controls {
+    position: fixed; bottom: 20px; left: 20px; right: 20px; height: 150px;
+    display: none; pointer-events: none; z-index: 50;
+    justify-content: space-between;
+  }
+  @media (hover: none) and (pointer: coarse) {
+    #mobile-controls { display: flex; pointer-events: auto; }
+    #start-screen .controls { display: none; }
+    #start-screen .controls.mobile-only { display: block !important; }
+  }
+  .control-zone {
+    width: 150px; height: 150px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    position: relative;
+    backdrop-filter: blur(4px);
+    touch-action: none;
+  }
+  .joystick-knob {
+    width: 60px; height: 60px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  .action-buttons {
+    display: flex; gap: 20px; align-items: flex-end;
+    pointer-events: auto;
+  }
+  .btn {
+    width: 70px; height: 70px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    color: white; font-family: 'Courier New', monospace;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; font-size: 14px;
+    user-select: none;
+    backdrop-filter: blur(4px);
+    touch-action: none;
+  }
+  .btn:active, .btn.active { background: rgba(255, 255, 255, 0.3); }
 </style>
 </head>
 <body>
@@ -67,8 +118,24 @@
     SHIFT — Boost &nbsp;|&nbsp; SPACE — Brake<br>
     Mouse — Fine control
   </div>
+  <div class="controls mobile-only" style="display:none">
+    Touch & Drag Left — Steer<br>
+    Buttons — Boost / Brake<br>
+    <span style="color:#ffaa00; font-weight:bold; margin-top:8px; display:block">LANDSCAPE MODE RECOMMENDED</span>
+  </div>
   <div class="blink">[ CLICK TO FLY ]</div>
 </div>
+
+<div id="mobile-controls">
+  <div id="joystick-zone" class="control-zone">
+    <div id="joystick-knob" class="joystick-knob"></div>
+  </div>
+  <div class="action-buttons">
+    <div id="btn-brake" class="btn">BRAKE</div>
+    <div id="btn-boost" class="btn">BOOST</div>
+  </div>
+</div>
+
 <div id="hud">
   <div>
     <div id="score-display">0</div>
@@ -103,6 +170,96 @@ const game = {
 
 const keys = {};
 let mouseDX = 0, mouseDY = 0, pointerLocked = false;
+let touchSX = 0, touchSY = 0;
+let touchBoost = false, touchBrake = false;
+
+// Touch Controls
+const joyZone = document.getElementById('joystick-zone');
+const joyKnob = document.getElementById('joystick-knob');
+const btnBrake = document.getElementById('btn-brake');
+const btnBoost = document.getElementById('btn-boost');
+
+if (joyZone) {
+  let joyId = null;
+  const rect = joyZone.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const maxR = rect.width / 2;
+
+  joyZone.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    joyId = t.identifier;
+    updateJoystick(t.clientX, t.clientY);
+  }, {passive: false});
+
+  joyZone.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (let i=0; i<e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === joyId) {
+        updateJoystick(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+        break;
+      }
+    }
+  }, {passive: false});
+
+  const endJoy = (e) => {
+    e.preventDefault();
+    for (let i=0; i<e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === joyId) {
+        joyId = null;
+        touchSX = 0; touchSY = 0;
+        joyKnob.style.transform = `translate(-50%, -50%)`;
+        break;
+      }
+    }
+  };
+  joyZone.addEventListener('touchend', endJoy);
+  joyZone.addEventListener('touchcancel', endJoy);
+
+  function updateJoystick(x, y) {
+    const rect = joyZone.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const maxR = rect.width / 2;
+
+    let dx = x - cx;
+    let dy = y - cy;
+    const d = Math.sqrt(dx*dx + dy*dy);
+    if (d > maxR) {
+      const f = maxR / d;
+      dx *= f; dy *= f;
+    }
+    
+    // Map to -1..1
+    touchSX = dx / maxR;
+    touchSY = -dy / maxR; // Invert Y for flight controls (up is down?) - actually let's check updateGame logic.
+    // In updateGame: if(keys['KeyW']) sy+=1. So positive sy is UP.
+    // Screen Y increases downwards. So dragging UP (negative dy) should be positive sy.
+    // So touchSY = -dy / maxR is correct for "up is up".
+    
+    joyKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+  }
+
+  const bindBtn = (el, type) => {
+    el.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (type === 'brake') touchBrake = true;
+      else touchBoost = true;
+      el.classList.add('active');
+    }, {passive: false});
+    const end = (e) => {
+      e.preventDefault();
+      if (type === 'brake') touchBrake = false;
+      else touchBoost = false;
+      el.classList.remove('active');
+    };
+    el.addEventListener('touchend', end);
+    el.addEventListener('touchcancel', end);
+  };
+  bindBtn(btnBrake, 'brake');
+  bindBtn(btnBoost, 'boost');
+}
 
 document.addEventListener('keydown', e => { keys[e.code] = true; });
 document.addEventListener('keyup', e => { keys[e.code] = false; });
@@ -598,8 +755,8 @@ function updateGame(dt){
 
   // Speed
   let ts=1.0;
-  if(keys['ShiftLeft']||keys['ShiftRight'])ts=2.0;
-  if(keys['Space'])ts=0.4;
+  if(keys['ShiftLeft']||keys['ShiftRight']||touchBoost)ts=2.0;
+  if(keys['Space']||touchBrake)ts=0.4;
   game.speed+=(ts-game.speed)*4.0*game.dt;
 
   // Steer
@@ -608,6 +765,10 @@ function updateGame(dt){
   if(keys['KeyD']||keys['ArrowRight'])sx+=1;
   if(keys['KeyW']||keys['ArrowUp'])sy+=1;
   if(keys['KeyS']||keys['ArrowDown'])sy-=1;
+  
+  sx += touchSX * 2.5; 
+  sy += touchSY * 2.5;
+
   sx+=mouseDX*15.0;
   sy-=mouseDY*15.0;
   mouseDX*=0.4; mouseDY*=0.4;
