@@ -87,11 +87,12 @@ function update() {
         t = now;
         
         if (gameStarted) {
-            // Apply look joystick rotation
+            // Apply look joystick rotation (Independent of mouse controls)
             if (lookJoystickActive || (lookJoystickInput.x !== 0 || lookJoystickInput.y !== 0)) {
-                const sens = 0.04; // Sensitivity per frame
-                player.angle[0] += lookJoystickInput.x * sens;
-                player.angle[1] = clamp(player.angle[1] - lookJoystickInput.y * sens, -Math.PI/2.5, Math.PI/2.5);
+                const sensX = 0.04; // Sensitivity per frame for X
+                const sensY = 0.03; // Reduced sensitivity for Y (up/down) - Joystick only
+                player.angle[0] += lookJoystickInput.x * sensX;
+                player.angle[1] = clamp(player.angle[1] - lookJoystickInput.y * sensY, -Math.PI/2.5, Math.PI/2.5);
             }
 
             player.update();
