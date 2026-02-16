@@ -121,7 +121,7 @@
   <div class="controls mobile-only" style="display:none">
     Touch & Drag Left — Steer<br>
     Buttons — Boost / Brake<br>
-    <span style="color:#ffaa00; font-weight:bold; margin-top:8px; display:block">LANDSCAPE MODE RECOMMENDED</span>
+    <span style="color:#ffaa00; font-weight:bold; margin-top:8px; display:block">PORTRAIT MODE RECOMMENDED ON MOBILE</span>
   </div>
   <div class="blink">[ CLICK TO FLY ]</div>
 </div>
@@ -286,19 +286,22 @@ window.addEventListener('resize', resize);
 resize();
 
 // Start
-document.getElementById('start-screen').addEventListener('click', () => {
-  document.getElementById('start-screen').style.display = 'none';
-  document.getElementById('hud').classList.add('show');
-  game.started = true;
-  canvas.requestPointerLock();
-  initAudio();
+document.addEventListener('click', () => {
+  if (!game.started) {
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('hud').classList.add('show');
+    game.started = true;
+    canvas.requestPointerLock();
+    initAudio();
+  } else if (game.over) {
+    restartGame();
+  } else if (!pointerLocked) {
+    canvas.requestPointerLock();
+  }
 });
+
 document.addEventListener('pointerlockchange', () => {
   pointerLocked = document.pointerLockElement === canvas;
-});
-canvas.addEventListener('click', () => {
-  if (game.started && !pointerLocked) canvas.requestPointerLock();
-  if (game.over) restartGame();
 });
 
 // ============================================================
