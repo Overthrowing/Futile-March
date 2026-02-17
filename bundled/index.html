@@ -14,13 +14,29 @@
         line-height: 1.6;
     }
 
-    h1 {
+    .intro {
         text-align: center;
+        margin-bottom: 48px;
+    }
+
+    .intro h1 {
         color: #fff;
-        margin-bottom: 60px;
+        margin: 0 0 12px 0;
         font-weight: 800;
         letter-spacing: -1px;
         font-size: 2.5rem;
+    }
+
+    .intro .subtitle {
+        color: #ccc;
+        font-size: 1.1em;
+        margin: 0 0 6px 0;
+    }
+
+    .intro .note {
+        color: #666;
+        font-size: 0.9em;
+        margin: 0;
     }
 
     .grid {
@@ -122,83 +138,136 @@
         font-size: 0.95rem;
         margin-bottom: 16px;
     }
+
+    .section-title {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+        color: #555;
+        margin: 0 0 20px 0;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #252525;
+    }
+
+    .winner-section {
+        padding: 32px 0 40px;
+        margin-bottom: 40px;
+    }
+
+    .winner-section .section-title {
+        color: #b8860b;
+        border-bottom-color: rgba(255, 215, 0, 0.2);
+    }
+
+    .winner-section .grid {
+        max-width: 380px;
+        margin: 0 auto;
+    }
+
+    .experiments-section .section-title {
+        color: #555;
+    }
+
+    .footer-links {
+        text-align: center;
+        padding-top: 32px;
+        margin-top: 32px;
+        border-top: 1px solid #252525;
+        color: #666;
+        font-size: 0.9em;
+    }
+
+    .footer-links a {
+        display: inline;
+        height: auto;
+        color: #888;
+        text-decoration: none;
+        border-bottom: 1px dotted #555;
+    }
+
+    .footer-links a:hover {
+        color: #aaa;
+        border-bottom-color: #888;
+    }
 </style>
 
 <body>
-    <h1>Futile March Collection</h1>
-    <p style="text-align: center; color: #ccc; font-size: 1.1em; margin-bottom: 10px; margin-top: -40px;">
-        Games with no assets, no game engine, just WebGL, raymarching, and signed distance functions.
-    </p>
-    <p style="text-align: center; color: #666; font-size: 0.9em; margin-bottom: 40px;">
-        Note: These experiments use advanced WebGL features and work best on Safari or Chrome.
-    </p>
+    <header class="intro">
+        <h1>Futile March Collection</h1>
+        <p class="subtitle">Games with no assets, no game engine, just WebGL, raymarching, and signed distance functions.</p>
+        <p class="note">Best viewed in Safari or Chrome.</p>
+    </header>
 
-    <div class="grid">
-        <a href="sisyphus.html">
-            <div class="card winner">
-                <img src="static/sisyphus.jpeg" class="card-image" alt="Sisyphus Game">
-                <div class="card-content">
-                    <h2>Sisyphus <span class="tag">WINNER</span></h2>
-                    <div class="desc">A 3D browser raymarching-based game inspired by the myth of Sisyphus. Push the
-                        boulder up the mountain. No assets, under 15 kB (Compressed).</div>
-                    <div class="meta">📦 15 kB</div>
+    <section class="winner-section">
+        <p class="section-title">TartanHacks 2026 Submission</p>
+        <div class="grid">
+            <a href="sisyphus.html">
+                <div class="card winner">
+                    <img src="static/sisyphus.jpeg" class="card-image" alt="Sisyphus Game">
+                    <div class="card-content">
+                        <h2>Sisyphus <span class="tag">WINNER</span></h2>
+                        <div class="desc">A 3D browser raymarching-based game inspired by the myth of Sisyphus. Push the
+                            boulder up the mountain. No assets, under 15 kB (Compressed).</div>
+                        <div class="meta">📦 15 kB</div>
+                    </div>
                 </div>
-            </div>
-        </a>
-
-        <a href="sites/fractal_flyer.html">
-            <div class="card">
-                <img src="static/fractal_flyer.jpeg" class="card-image" alt="Fractal Flyer">
-                <div class="card-content">
-                    <h2>Fractal Flyer <span class="tag experiment">EXPERIMENT</span></h2>
-                    <div class="desc">Tests real-time rendering of infinite fractal structures using Signed Distance Functions (SDFs) and raymarching.</div>
-                    <div class="meta">📦 2 kB</div>
-                </div>
-            </div>
-        </a>
-
-        <a href="sites/flyer.html">
-            <div class="card">
-                <img src="static/neon.jpeg" class="card-image" alt="Neon Racer">
-                <div class="card-content">
-                    <h2>Neon Racer <span class="tag experiment">EXPERIMENT</span></h2>
-                    <div class="desc">Tests hybrid rendering techniques combining raymarching for the player ship with standard polygon rasterization for the environment.</div>
-                    <div class="meta">📦 5 kB</div>
-                </div>
-            </div>
-        </a>
-
-        
-
-        <a href="sites/seascape.html">
-            <div class="card">
-                <img src="static/ocean.jpeg" class="card-image" alt="Seascape">
-                <div class="card-content">
-                    <h2>Seascape <span class="tag experiment">EXPERIMENT</span></h2>
-                    <div class="desc">Tests advanced procedural water generation using heightmap tracing and volumetric fog.</div>
-                    <div class="meta">📦 7 kB</div>
-                </div>
-            </div>
-        </a>
-
-        <a href="sites/flyer2.html">
-            <div class="card">
-                <img src="static/terrain.jpeg" class="card-image" alt="Mountain Glide">
-                <div class="card-content">
-                    <h2>Mountain Glide <span class="tag experiment">EXPERIMENT</span></h2>
-                    <div class="desc">Tests procedural terrain generation (perlin noise) and collision detection within the context of Signed Distance Functions (SDFs).</div>
-                    <div class="meta">📦 7 kB</div>
-                </div>
-            </div>
-        </a>
-    </div>
-    <div style="text-align: center; margin-top: 40px; color: #666; font-size: 0.9em;">
-        <p style="margin-top: 15px;">
-            <a href="https://github.com/Overthrowing/Futile-March?tab=readme-ov-file" target="_blank" style="color: #888; text-decoration: none; border-bottom: 1px dotted #888;">
-                View Source on GitHub ↗
             </a>
-        </p>
-    </div>
+        </div>
+    </section>
+
+    <section class="experiments-section">
+        <p class="section-title">Experiments</p>
+        <div class="grid">
+            <a href="sites/fractal_flyer.html">
+                <div class="card">
+                    <img src="static/fractal_flyer.jpeg" class="card-image" alt="Fractal Flyer">
+                    <div class="card-content">
+                        <h2>Fractal Flyer <span class="tag experiment">EXPERIMENT</span></h2>
+                        <div class="desc">Tests real-time rendering of infinite fractal structures using Signed Distance Functions (SDFs) and raymarching.</div>
+                        <div class="meta">📦 2 kB</div>
+                    </div>
+                </div>
+            </a>
+
+            <a href="sites/flyer.html">
+                <div class="card">
+                    <img src="static/neon.jpeg" class="card-image" alt="Neon Racer">
+                    <div class="card-content">
+                        <h2>Neon Racer <span class="tag experiment">EXPERIMENT</span></h2>
+                        <div class="desc">Tests hybrid rendering techniques combining raymarching for the player ship with standard polygon rasterization for the environment.</div>
+                        <div class="meta">📦 5 kB</div>
+                    </div>
+                </div>
+            </a>
+
+            <a href="sites/seascape.html">
+                <div class="card">
+                    <img src="static/ocean.jpeg" class="card-image" alt="Seascape">
+                    <div class="card-content">
+                        <h2>Seascape <span class="tag experiment">EXPERIMENT</span></h2>
+                        <div class="desc">Tests advanced procedural water generation using heightmap tracing and volumetric fog.</div>
+                        <div class="meta">📦 7 kB</div>
+                    </div>
+                </div>
+            </a>
+
+            <a href="sites/flyer2.html">
+                <div class="card">
+                    <img src="static/terrain.jpeg" class="card-image" alt="Mountain Glide">
+                    <div class="card-content">
+                        <h2>Mountain Glide <span class="tag experiment">EXPERIMENT</span></h2>
+                        <div class="desc">Tests procedural terrain generation (perlin noise) and collision detection within the context of Signed Distance Functions (SDFs).</div>
+                        <div class="meta">📦 7 kB</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </section>
+
+    <footer class="footer-links">
+        <a href="https://github.com/Overthrowing/Futile-March?tab=readme-ov-file" target="_blank">View source on GitHub ↗</a>
+    </footer>
 </body>
 
 </html>
