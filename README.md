@@ -89,7 +89,6 @@ The game features a unique "Wi-Fi" button that demonstrates dynamic module loadi
 
 ## Credits
 Inspirations for experiments:
-https://www.shadertoy.com/view/XsBXWt
-https://www.shadertoy.com/view/MdXyzX
+https://www.shadertoy.com/view/MdXyzXhttps://www.shadertoy.com/view/XsBXWt
 
 Background music: Vivaldi.
