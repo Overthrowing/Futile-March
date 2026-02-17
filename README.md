@@ -88,6 +88,8 @@ The game features a unique "Wi-Fi" button that demonstrates dynamic module loadi
 3.  This module then initializes `wifi.js`, which hooks into the DOM to control audio playback.
 
 ## Credits
+Inspirations for experiments:
+https://www.shadertoy.com/view/XsBXWt
+https://www.shadertoy.com/view/MdXyzX
 
-Created as an exploration of WebGL and the futility of existence.
 Background music: Vivaldi.
